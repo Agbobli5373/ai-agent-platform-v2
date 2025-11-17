@@ -1,0 +1,58 @@
+/* Custom Application Styles */
+
+/* Base styles */
+:root {
+    --primary-color: #4f46e5;
+    --secondary-color: #06b6d4;
+    --success-color: #10b981;
+    --danger-color: #ef4444;
+    --warning-color: #f59e0b;
+}
+
+/* Custom utility classes */
+.btn-primary {
+    @apply bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-200;
+}
+
+.btn-secondary {
+    @apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition duration-200;
+}
+
+.card {
+    @apply bg-white rounded-lg shadow-md p-6;
+}
+
+/* Loading spinner */
+.spinner {
+    border: 3px solid rgba(0, 0, 0, 0.1);
+    border-radius: 50%;
+    border-top-color: var(--primary-color);
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Toast notifications */
+.toast {
+    @apply fixed top-4 right-4 z-50 max-w-sm bg-white shadow-lg rounded-lg p-4 border-l-4;
+}
+
+.toast-success {
+    @apply border-green-500;
+}
+
+.toast-error {
+    @apply border-red-500;
+}
+
+.toast-warning {
+    @apply border-yellow-500;
+}
+
+.toast-info {
+    @apply border-blue-500;
+}

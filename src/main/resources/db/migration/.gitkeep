@@ -1,0 +1,2 @@
+# Database migration scripts will be placed here
+# Flyway will automatically execute SQL scripts in version order
