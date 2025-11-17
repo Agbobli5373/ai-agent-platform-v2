@@ -1,0 +1,82 @@
+{#include wizard/layout.html}
+
+{#wizardContent}
+<div x-show="currentStep === 2">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Configure System Prompt</h2>
+        <p class="text-gray-600">Define how your agent should behave and respond to users.</p>
+    </div>
+
+    <form class="space-y-6">
+        <!-- System Prompt -->
+        <div>
+            <label for="systemPrompt" class="block text-sm font-medium text-gray-700 mb-2">
+                System Prompt <span class="text-red-500">*</span>
+            </label>
+            <textarea 
+                id="systemPrompt"
+                x-model="formData.systemPrompt"
+                rows="12"
+                placeholder="You are a helpful customer support assistant. Your role is to:&#10;- Answer customer questions clearly and professionally&#10;- Provide accurate information about products and services&#10;- Escalate complex issues to human agents when necessary&#10;- Maintain a friendly and empathetic tone&#10;&#10;Always be polite, patient, and helpful in your responses."
+                class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors font-mono text-sm resize-none"
+                :class="errors.systemPrompt ? 'border-red-500' : ''"
+            ></textarea>
+            <p x-show="errors.systemPrompt" class="mt-1 text-sm text-red-600" x-text="errors.systemPrompt"></p>
+            <div class="mt-2 flex items-center justify-between">
+                <p class="text-sm text-gray-500">Define your agent's personality, role, and guidelines (10-10000 characters)</p>
+                <span class="text-sm text-gray-500" x-text="`${formData.systemPrompt.length} / 10000`"></span>
+            </div>
+        </div>
+
+        <!-- Tips Section -->
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-green-900 mb-2 flex items-center">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
+                </svg>
+                Tips for Writing Effective Prompts
+            </h3>
+            <ul class="text-sm text-green-800 space-y-1 ml-7">
+                <li>• Be specific about the agent's role and responsibilities</li>
+                <li>• Define the tone and personality (professional, friendly, formal, etc.)</li>
+                <li>• Include guidelines for handling different scenarios</li>
+                <li>• Specify any limitations or boundaries</li>
+                <li>• Mention when to escalate to humans if applicable</li>
+            </ul>
+        </div>
+
+        <!-- Example Templates -->
+        <div class="border border-gray-200 rounded-lg p-4">
+            <h3 class="text-sm font-semibold text-gray-900 mb-3">Quick Start Templates</h3>
+            <div class="space-y-2">
+                <button 
+                    type="button"
+                    @click="formData.systemPrompt = 'You are a professional customer support assistant. Your role is to help customers with their inquiries, provide accurate information, and resolve issues efficiently. Always be polite, patient, and empathetic. If you cannot resolve an issue, escalate it to a human agent.'"
+                    class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                >
+                    <span class="font-medium text-gray-900">Customer Support</span>
+                    <p class="text-gray-600 text-xs mt-1">Professional support assistant template</p>
+                </button>
+                <button 
+                    type="button"
+                    @click="formData.systemPrompt = 'You are a knowledgeable sales assistant. Your goal is to help customers find the right products for their needs, answer questions about features and pricing, and guide them through the purchase process. Be enthusiastic, helpful, and focus on understanding customer needs.'"
+                    class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                >
+                    <span class="font-medium text-gray-900">Sales Assistant</span>
+                    <p class="text-gray-600 text-xs mt-1">Helpful sales and product guidance template</p>
+                </button>
+                <button 
+                    type="button"
+                    @click="formData.systemPrompt = 'You are a creative content writer. Your role is to generate engaging, well-written content based on user requests. Adapt your writing style to match the requested tone and format. Focus on clarity, creativity, and meeting the user\'s specific requirements.'"
+                    class="w-full text-left px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100 rounded border border-gray-200 transition-colors"
+                >
+                    <span class="font-medium text-gray-900">Content Writer</span>
+                    <p class="text-gray-600 text-xs mt-1">Creative writing and content generation template</p>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{/wizardContent}
+
+{/include}

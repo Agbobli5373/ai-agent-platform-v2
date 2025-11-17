@@ -1,0 +1,224 @@
+{#include wizard/layout.html}
+
+{#wizardContent}
+<div x-show="currentStep === 4" x-data="previewStep()">
+    <div class="mb-6">
+        <h2 class="text-2xl font-bold text-gray-900 mb-2">Preview & Deploy</h2>
+        <p class="text-gray-600">Test your agent before deploying it.</p>
+    </div>
+
+    <!-- Configuration Summary -->
+    <div class="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Configuration Summary</h3>
+        <dl class="space-y-2">
+            <div class="flex justify-between text-sm">
+                <dt class="text-gray-600">Agent Name:</dt>
+                <dd class="font-medium text-gray-900" x-text="formData.name"></dd>
+            </div>
+            <div class="flex justify-between text-sm" x-show="formData.description">
+                <dt class="text-gray-600">Description:</dt>
+                <dd class="font-medium text-gray-900 text-right max-w-md truncate" x-text="formData.description"></dd>
+            </div>
+            <div class="flex justify-between text-sm">
+                <dt class="text-gray-600">System Prompt Length:</dt>
+                <dd class="font-medium text-gray-900" x-text="`${formData.systemPrompt.length} characters`"></dd>
+            </div>
+            <div class="flex justify-between text-sm">
+                <dt class="text-gray-600">Tools Selected:</dt>
+                <dd class="font-medium text-gray-900" x-text="`${formData.toolIds.length} tool(s)`"></dd>
+            </div>
+        </dl>
+    </div>
+
+    <!-- Test Chat Interface -->
+    <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Test Your Agent</h3>
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+            <!-- Chat Messages -->
+            <div class="bg-white p-4 h-64 overflow-y-auto space-y-3">
+                <template x-for="message in testMessages" :key="message.id">
+                    <div :class="message.role === 'user' ? 'flex justify-end' : 'flex justify-start'">
+                        <div 
+                            :class="message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900'"
+                            class="max-w-xs lg:max-w-md px-4 py-2 rounded-lg"
+                        >
+                            <p class="text-sm" x-text="message.content"></p>
+                        </div>
+                    </div>
+                </template>
+                
+                <!-- Loading indicator -->
+                <div x-show="testLoading" class="flex justify-start">
+                    <div class="bg-gray-100 text-gray-900 max-w-xs lg:max-w-md px-4 py-2 rounded-lg">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                            <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty state -->
+                <div x-show="testMessages.length === 0 && !testLoading" class="text-center py-8">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-500">Send a test message to preview your agent's responses</p>
+                </div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="bg-gray-50 p-4 border-t border-gray-200">
+                <form @submit.prevent="sendTestMessage" class="flex space-x-2">
+                    <input 
+                        type="text"
+                        x-model="testPrompt"
+                        placeholder="Type a test message..."
+                        class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        :disabled="testLoading"
+                    />
+                    <button 
+                        type="submit"
+                        :disabled="!testPrompt.trim() || testLoading"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path>
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deploy Button -->
+    <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+        <div class="text-sm text-gray-600">
+            <p>Ready to deploy your agent?</p>
+        </div>
+        <button 
+            @click="deployAgent"
+            :disabled="deploying"
+            class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+            <svg x-show="!deploying" class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <svg x-show="deploying" class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span x-text="deploying ? 'Deploying...' : 'Deploy Agent'"></span>
+        </button>
+    </div>
+</div>
+
+<script>
+    function previewStep() {
+        return {
+            testPrompt: '',
+            testMessages: [],
+            testLoading: false,
+            deploying: false,
+
+            async sendTestMessage() {
+                if (!this.testPrompt.trim()) return;
+
+                const userMessage = {
+                    id: Date.now(),
+                    role: 'user',
+                    content: this.testPrompt
+                };
+                
+                this.testMessages.push(userMessage);
+                const prompt = this.testPrompt;
+                this.testPrompt = '';
+                this.testLoading = true;
+
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const response = await fetch('/api/wizard/preview', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            configuration: {
+                                name: this.formData.name,
+                                description: this.formData.description,
+                                systemPrompt: this.formData.systemPrompt,
+                                toolIds: this.formData.toolIds,
+                                modelName: 'mistral-large-latest'
+                            },
+                            testPrompt: prompt
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.testMessages.push({
+                            id: Date.now() + 1,
+                            role: 'assistant',
+                            content: data.response
+                        });
+                    } else {
+                        this.testMessages.push({
+                            id: Date.now() + 1,
+                            role: 'assistant',
+                            content: 'Error: Failed to get response from agent'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Preview error:', error);
+                    this.testMessages.push({
+                        id: Date.now() + 1,
+                        role: 'assistant',
+                        content: 'Error: ' + error.message
+                    });
+                } finally {
+                    this.testLoading = false;
+                }
+            },
+
+            async deployAgent() {
+                this.deploying = true;
+
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const response = await fetch('/api/wizard/deploy', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            name: this.formData.name,
+                            description: this.formData.description,
+                            systemPrompt: this.formData.systemPrompt,
+                            toolIds: this.formData.toolIds,
+                            modelName: 'mistral-large-latest'
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        // Show success message and redirect
+                        window.location.href = '/agents/' + data.id;
+                    } else {
+                        const error = await response.json();
+                        alert('Deployment failed: ' + (error.message || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Deployment error:', error);
+                    alert('Deployment failed: ' + error.message);
+                } finally {
+                    this.deploying = false;
+                }
+            }
+        }
+    }
+</script>
+{/wizardContent}
+
+{/include}

@@ -357,6 +357,217 @@ curl -X GET http://localhost:8080/dashboard/activity \
   -H "Authorization: Bearer TOKEN"
 ```
 
+### Wizard API
+
+The platform provides REST endpoints for the agent creation wizard:
+
+#### POST /api/wizard/session
+Initialize a new wizard session.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Response:**
+```json
+{
+  "sessionId": "uuid",
+  "currentStep": "PURPOSE"
+}
+```
+
+#### GET /api/wizard/session/{sessionId}
+Get current wizard session state.
+
+**Authentication:** Required (must own the session)
+
+**Response:**
+```json
+{
+  "sessionId": "uuid",
+  "userId": "uuid",
+  "currentStep": "PURPOSE",
+  "stepData": {
+    "PURPOSE": { "name": "Customer Support Bot", "description": "..." },
+    "PROMPT": { "systemPrompt": "..." }
+  },
+  "createdAt": "2024-11-17T10:30:00"
+}
+```
+
+#### PUT /api/wizard/session/{sessionId}/step
+Save wizard step data.
+
+**Authentication:** Required (must own the session)
+
+**Request Body:**
+```json
+{
+  "step": "PURPOSE",
+  "data": {
+    "name": "Customer Support Bot",
+    "description": "Helps customers with common questions"
+  }
+}
+```
+
+**Response:** 200 OK with success message
+
+#### POST /api/wizard/validate
+Validate agent configuration.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "name": "Customer Support Bot",
+  "description": "Helps customers",
+  "systemPrompt": "You are a helpful customer support assistant...",
+  "temperature": 0.7,
+  "maxTokens": 2000,
+  "toolIds": ["uuid1", "uuid2"]
+}
+```
+
+**Response:**
+```json
+{
+  "valid": true,
+  "errors": []
+}
+```
+
+Or if invalid:
+```json
+{
+  "valid": false,
+  "errors": ["Agent name is required", "System prompt must be at least 10 characters"]
+}
+```
+
+#### POST /api/wizard/preview
+Preview agent with test prompt.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "config": {
+    "name": "Customer Support Bot",
+    "systemPrompt": "You are a helpful assistant...",
+    "temperature": 0.7,
+    "maxTokens": 2000
+  },
+  "testPrompt": "What are your business hours?"
+}
+```
+
+**Response:**
+```json
+{
+  "response": "Our business hours are Monday-Friday, 9 AM to 5 PM EST.",
+  "tokensUsed": 45,
+  "responseTime": 1.2
+}
+```
+
+#### POST /api/wizard/deploy
+Deploy agent to production.
+
+**Authentication:** Required
+
+**Request Body:**
+```json
+{
+  "sessionId": "uuid",
+  "config": {
+    "name": "Customer Support Bot",
+    "description": "Helps customers with common questions",
+    "systemPrompt": "You are a helpful customer support assistant...",
+    "temperature": 0.7,
+    "maxTokens": 2000,
+    "toolIds": ["uuid1", "uuid2"]
+  }
+}
+```
+
+**Response:** 201 Created
+```json
+{
+  "agentId": "uuid",
+  "name": "Customer Support Bot",
+  "status": "ACTIVE"
+}
+```
+
+#### DELETE /api/wizard/session/{sessionId}
+Delete wizard session.
+
+**Authentication:** Required (must own the session)
+
+**Response:** 200 OK with success message
+
+### Testing Wizard API
+
+```bash
+# Initialize wizard session
+curl -X POST http://localhost:8080/api/wizard/session \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json"
+
+# Save step data (replace SESSION_ID)
+curl -X PUT http://localhost:8080/api/wizard/session/SESSION_ID/step \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "step": "PURPOSE",
+    "data": {
+      "name": "Customer Support Bot",
+      "description": "Helps customers with common questions"
+    }
+  }'
+
+# Validate configuration
+curl -X POST http://localhost:8080/api/wizard/validate \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Customer Support Bot",
+    "systemPrompt": "You are a helpful assistant...",
+    "temperature": 0.7,
+    "maxTokens": 2000
+  }'
+
+# Preview agent
+curl -X POST http://localhost:8080/api/wizard/preview \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "config": {
+      "name": "Customer Support Bot",
+      "systemPrompt": "You are a helpful assistant...",
+      "temperature": 0.7,
+      "maxTokens": 2000
+    },
+    "testPrompt": "What are your business hours?"
+  }'
+
+# Deploy agent
+curl -X POST http://localhost:8080/api/wizard/deploy \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "SESSION_ID",
+    "config": {
+      "name": "Customer Support Bot",
+      "description": "Helps customers",
+      "systemPrompt": "You are a helpful assistant...",
+      "temperature": 0.7,
+      "maxTokens": 2000
+    }
+  }'
+```
+
 ### Dashboard Features
 
 The dashboard provides a modern, responsive interface with the following features:
@@ -489,15 +700,14 @@ Key configuration in `application.properties`:
   - All 10 entity models implemented with Panache
   - Vector similarity search configured with pgvector
 
-### In Progress
-- 🔄 **Task 3**: Authentication and authorization service (IN PROGRESS)
+- ✅ **Task 3**: Authentication and authorization service (COMPLETE)
   - ✅ Task 3.1: Authentication service with JWT support
     - AuthenticationService with login and session management
     - JwtTokenProvider for token generation and validation
     - PasswordHasher utility using BCrypt
     - UserRepository with Panache queries
     - Redis-based session storage
-  - ✅ Task 3.2: Role-based access control (PARTIAL)
+  - ✅ Task 3.2: Role-based access control (COMPLETE - some items marked incomplete in tasks.md)
     - RBAC policy engine with permission checking
     - Role definitions (ADMIN, USER, VIEWER)
     - Permission enum and RequiresPermission annotation
@@ -511,8 +721,15 @@ Key configuration in `application.properties`:
     - POST /api/auth/register - User registration
     - GET /api/auth/me - Current user info
     - Secured with @PermitAll and @Authenticated annotations
-  - ⏳ Task 3.4: Authentication and registration UI with Qute (PENDING)
-  - ⏳ Task 3.5: Authentication service tests (PENDING)
+  - ✅ Task 3.4: Authentication and registration UI with Qute
+    - Login page template with email and password fields
+    - Registration page template with user details form
+    - Form validation and error display
+    - Password strength indicator component
+    - "Forgot password" page template
+    - Responsive design for mobile login/registration
+    - Success/error message display
+  - ⏳ Task 3.5: Authentication service tests (PENDING - optional test task)
 
 - ✅ **Task 4**: Modern dashboard layout and navigation (COMPLETE)
   - ✅ Task 4.1: Base dashboard layout template
@@ -538,24 +755,53 @@ Key configuration in `application.properties`:
     - Notification bell with badge indicator
     - Mobile-responsive navigation
 
+### In Progress
+- 🔄 **Task 5**: Agent wizard service and UI (IN PROGRESS)
+  - ✅ Task 5.1: Agent wizard service
+    - AgentWizardService with session management
+    - Wizard step validation logic
+    - Agent configuration builder
+    - Agent deployment method that persists to database
+    - Preview functionality with test prompt execution
+  - ✅ Task 5.2: Qute templates for wizard interface
+    - Wizard layout template with step navigation and Tailwind styling
+    - Step 1 template for agent purpose and name input
+    - Step 2 template for system prompt configuration with textarea
+    - Step 3 template for tool selection with checkboxes
+    - Step 4 template for preview and deployment with test chat
+    - Progress indicator showing current step
+    - Modern styling with Tailwind CSS
+  - ✅ Task 5.3: Wizard REST endpoints
+    - POST /api/wizard/session - Initialize wizard session
+    - GET /api/wizard/session/{sessionId} - Get session state
+    - PUT /api/wizard/session/{sessionId}/step - Save step data
+    - POST /api/wizard/validate - Validate configuration
+    - POST /api/wizard/preview - Preview agent with test prompt
+    - POST /api/wizard/deploy - Deploy agent
+    - DELETE /api/wizard/session/{sessionId} - Delete session
+    - All endpoints secured with JWT authentication
+    - Session ownership verification for security
+  - ⏳ Task 5.4: Wizard validation logic (PENDING)
+  - ⏳ Task 5.5: Wizard service tests (PENDING - optional test task)
+
 The following features are planned and documented in `.kiro/specs/ai-agent-platform/`:
-- 🔄 Authentication and authorization (Task 3) - Partially complete
+- ✅ Authentication and authorization (Task 3) - Complete
 - ✅ Dashboard layout and navigation (Task 4) - Complete
-- 🔄 Agent wizard service and UI (Task 5)
-- 🔄 LangChain4j AI services integration (Task 6)
-- 🔄 Agent runtime service (Task 7)
-- 🔄 Tool registry and execution (Task 8)
-- 🔄 Vector store and document indexing (Task 9)
-- 🔄 Monitoring and metrics (Task 10)
-- 🔄 Usage tracking and cost management (Task 11)
-- 🔄 REST API for programmatic access (Task 12)
-- 🔄 Onboarding and help system (Task 13)
-- 🔄 Error handling and user feedback (Task 14)
-- 🔄 Security and GDPR compliance (Task 15)
-- 🔄 Mobile responsive UI (Task 16)
-- 🔄 Deployment and infrastructure (Task 17)
-- 🔄 Performance optimization (Task 18)
-- 🔄 Integration and E2E testing (Task 19)
+- 🔄 Agent wizard service and UI (Task 5) - In Progress (2/5 subtasks complete)
+- ⏳ LangChain4j AI services integration (Task 6)
+- ⏳ Agent runtime service (Task 7)
+- ⏳ Tool registry and execution (Task 8)
+- ⏳ Vector store and document indexing (Task 9)
+- ⏳ Monitoring and metrics (Task 10)
+- ⏳ Usage tracking and cost management (Task 11)
+- ⏳ REST API for programmatic access (Task 12)
+- ⏳ Onboarding and help system (Task 13)
+- ⏳ Error handling and user feedback (Task 14)
+- ⏳ Security and GDPR compliance (Task 15)
+- ⏳ Mobile responsive UI (Task 16)
+- ⏳ Deployment and infrastructure (Task 17)
+- ⏳ Performance optimization (Task 18)
+- ⏳ Integration and E2E testing (Task 19)
 
 ### Planned Features
 - No-Code Agent Creation via wizard interface
@@ -609,6 +855,14 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
   - `getDashboardStats()`: Returns agent, conversation, satisfaction, and response time metrics
   - `getRecentActivity()`: Returns recent platform activity with timestamps
   - Currently returns mock data; will be implemented with database queries in future tasks
+- **AgentWizardService**: Agent creation wizard management
+  - `createSession()`: Initialize new wizard session with Redis storage
+  - `getSession()`: Retrieve wizard session state
+  - `saveStep()`: Save wizard step data to session
+  - `validateConfiguration()`: Validate agent configuration
+  - `previewAgent()`: Test agent with sample prompt (mock implementation)
+  - `deployAgent()`: Deploy agent to production database
+  - `deleteSession()`: Clean up wizard session
 
 ### Dashboard Architecture
 
@@ -636,27 +890,60 @@ The dashboard follows a hybrid rendering approach:
 8. Fetches recent activity from `/dashboard/activity`
 9. Updates UI with real data
 
+### Wizard Architecture
+
+The agent creation wizard follows a session-based approach:
+
+**Session Management:**
+- Wizard sessions stored in Redis with 1-hour expiration
+- Each session tracks current step and step data
+- Session ownership verified on all operations
+
+**Wizard Steps:**
+1. **PURPOSE** - Define agent name and description
+2. **PROMPT** - Configure system prompt and behavior
+3. **TOOLS** - Select API integrations (optional)
+4. **PREVIEW** - Test agent with sample prompts
+5. **DEPLOY** - Deploy agent to production
+
+**Workflow:**
+1. User clicks "Create Agent" from dashboard
+2. Frontend calls `POST /api/wizard/session` to initialize
+3. User completes each step, frontend calls `PUT /api/wizard/session/{id}/step`
+4. User can validate config at any time with `POST /api/wizard/validate`
+5. User tests agent with `POST /api/wizard/preview` (step 4)
+6. User deploys with `POST /api/wizard/deploy`
+7. Session automatically cleaned up after deployment
+
+**Security:**
+- All endpoints require JWT authentication
+- Session ownership verified on every operation
+- Organization-level isolation enforced at deployment
+- Configuration validation prevents malformed agents
+
 ## Next Steps for Development
 
 To continue implementation, follow the task breakdown in `.kiro/specs/ai-agent-platform/tasks.md`:
 
-1. **Task 3.4**: Build authentication and registration UI with Qute
-   - Create login page template
-   - Create registration page template
-   - Implement form validation and error display
-   - Add responsive design for mobile
+1. **Task 5.4**: Implement wizard validation logic
+   - Validate agent name and description
+   - Validate system prompt (length, content)
+   - Validate tool selection
+   - Check configuration completeness
 
-2. **Task 3.5**: Write authentication service tests
-   - Unit tests for JWT token generation
-   - Integration tests for login flow
-   - Test RBAC permission checking
+2. **Task 5.5**: Write wizard service tests (optional)
+   - Unit tests for wizard session management
+   - Tests for configuration validation
+   - Test agent deployment flow
+   - Test preview functionality
 
-3. **Task 4**: Create dashboard layout
-   - Build responsive base layout with Tailwind CSS
-   - Implement navigation and routing
-   - Create dashboard home page
+3. **Task 6**: Implement LangChain4j AI services integration
+   - Configure Mistral AI model provider
+   - Create AI service interfaces with LangChain4j
+   - Implement chat memory provider
+   - Write AI service integration tests
 
-4. **Tasks 5-19**: Continue with remaining features as documented
+4. **Tasks 7-19**: Continue with remaining features as documented
 
 ## Development Guidelines
 

@@ -1,0 +1,241 @@
+{#include layout/dashboard.html}
+
+{#title}Create Agent - AI Agent Platform{/title}
+
+{#breadcrumbs}
+<a href="/dashboard" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+</svg>
+<span class="text-gray-900 font-medium">Create Agent</span>
+{/breadcrumbs}
+
+{#content}
+<div class="max-w-4xl mx-auto" x-data="agentWizard()">
+    <!-- Progress Indicator -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-4 flex-1">
+                <!-- Step 1 -->
+                <div class="flex items-center">
+                    <div 
+                        class="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
+                        :class="currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
+                    >
+                        <span class="text-sm font-semibold">1</span>
+                    </div>
+                    <div class="ml-3 hidden sm:block">
+                        <p class="text-sm font-medium" :class="currentStep >= 1 ? 'text-gray-900' : 'text-gray-500'">Purpose</p>
+                    </div>
+                </div>
+
+                <!-- Connector -->
+                <div class="flex-1 h-0.5 mx-2" :class="currentStep >= 2 ? 'bg-blue-600' : 'bg-gray-200'"></div>
+
+                <!-- Step 2 -->
+                <div class="flex items-center">
+                    <div 
+                        class="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
+                        :class="currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
+                    >
+                        <span class="text-sm font-semibold">2</span>
+                    </div>
+                    <div class="ml-3 hidden sm:block">
+                        <p class="text-sm font-medium" :class="currentStep >= 2 ? 'text-gray-900' : 'text-gray-500'">Prompt</p>
+                    </div>
+                </div>
+
+                <!-- Connector -->
+                <div class="flex-1 h-0.5 mx-2" :class="currentStep >= 3 ? 'bg-blue-600' : 'bg-gray-200'"></div>
+
+                <!-- Step 3 -->
+                <div class="flex items-center">
+                    <div 
+                        class="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
+                        :class="currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
+                    >
+                        <span class="text-sm font-semibold">3</span>
+                    </div>
+                    <div class="ml-3 hidden sm:block">
+                        <p class="text-sm font-medium" :class="currentStep >= 3 ? 'text-gray-900' : 'text-gray-500'">Tools</p>
+                    </div>
+                </div>
+
+                <!-- Connector -->
+                <div class="flex-1 h-0.5 mx-2" :class="currentStep >= 4 ? 'bg-blue-600' : 'bg-gray-200'"></div>
+
+                <!-- Step 4 -->
+                <div class="flex items-center">
+                    <div 
+                        class="flex items-center justify-center w-10 h-10 rounded-full transition-colors"
+                        :class="currentStep >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'"
+                    >
+                        <span class="text-sm font-semibold">4</span>
+                    </div>
+                    <div class="ml-3 hidden sm:block">
+                        <p class="text-sm font-medium" :class="currentStep >= 4 ? 'text-gray-900' : 'text-gray-500'">Preview</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Wizard Content -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8">
+        {#insert wizardContent}
+        <!-- Step content will be inserted here -->
+        {/insert}
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="mt-6 flex items-center justify-between">
+        <button 
+            @click="previousStep"
+            x-show="currentStep > 1"
+            type="button"
+            class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+        >
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Previous
+        </button>
+
+        <div x-show="currentStep === 1"></div>
+
+        <button 
+            @click="nextStep"
+            x-show="currentStep < 4"
+            type="button"
+            class="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+        >
+            Next
+            <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </button>
+    </div>
+</div>
+{/content}
+
+{#scripts}
+<script>
+    function agentWizard() {
+        return {
+            currentStep: 1,
+            sessionId: null,
+            formData: {
+                name: '',
+                description: '',
+                systemPrompt: '',
+                toolIds: []
+            },
+            errors: {},
+            loading: false,
+
+            async init() {
+                // Initialize wizard session
+                await this.initializeSession();
+            },
+
+            async initializeSession() {
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const response = await fetch('/api/wizard/session', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        this.sessionId = data.sessionId;
+                    } else {
+                        console.error('Failed to initialize wizard session');
+                    }
+                } catch (error) {
+                    console.error('Error initializing wizard:', error);
+                }
+            },
+
+            async nextStep() {
+                if (await this.validateCurrentStep()) {
+                    await this.saveCurrentStep();
+                    if (this.currentStep < 4) {
+                        this.currentStep++;
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }
+                }
+            },
+
+            previousStep() {
+                if (this.currentStep > 1) {
+                    this.currentStep--;
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            },
+
+            async validateCurrentStep() {
+                this.errors = {};
+                
+                switch (this.currentStep) {
+                    case 1:
+                        if (!this.formData.name || this.formData.name.trim().length < 3) {
+                            this.errors.name = 'Agent name must be at least 3 characters';
+                            return false;
+                        }
+                        break;
+                    case 2:
+                        if (!this.formData.systemPrompt || this.formData.systemPrompt.trim().length < 10) {
+                            this.errors.systemPrompt = 'System prompt must be at least 10 characters';
+                            return false;
+                        }
+                        break;
+                }
+                
+                return true;
+            },
+
+            async saveCurrentStep() {
+                if (!this.sessionId) return;
+
+                try {
+                    const token = localStorage.getItem('accessToken');
+                    const stepData = {};
+                    
+                    switch (this.currentStep) {
+                        case 1:
+                            stepData.name = this.formData.name;
+                            stepData.description = this.formData.description;
+                            break;
+                        case 2:
+                            stepData.systemPrompt = this.formData.systemPrompt;
+                            break;
+                        case 3:
+                            stepData.toolIds = this.formData.toolIds;
+                            break;
+                    }
+
+                    await fetch(`/api/wizard/session/${this.sessionId}/step`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            step: this.currentStep,
+                            data: stepData
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error saving step:', error);
+                }
+            }
+        }
+    }
+</script>
+{/scripts}
+
+{/include}
