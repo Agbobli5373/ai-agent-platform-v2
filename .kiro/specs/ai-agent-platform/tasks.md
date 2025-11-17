@@ -1,20 +1,6 @@
 # Implementation Plan
 
 - [x] 1. Set up project structure and core dependencies
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   - Create Quarkus project with Maven configuration
   - Add LangChain4j Quarkus extensions (langchain4j-core, langchain4j-mistral)
   - Configure PostgreSQL with pgvector extension dependency
@@ -26,8 +12,14 @@
   - Create static assets directory structure (css, js, images)
   - _Requirements: 1.1, 1.3, 2.1, 2.4, 9.1_
 
-- [ ] 2. Implement database schema and entity models
-  - [ ] 2.1 Create core entity classes with Panache
+- [x] 2. Implement database schema and entity models
+
+
+
+
+  - [x] 2.1 Create core entity classes with Panache
+
+
     - Write Organization entity with usage limits and settings
     - Write User entity with authentication fields and organization relationship
     - Write Agent entity with configuration, status, and relationships
@@ -35,14 +27,20 @@
     - Write AgentTool junction entity for many-to-many relationship
     - _Requirements: 1.1, 2.1, 3.1, 3.2_
   
+
+
   - [ ] 2.2 Create conversation and messaging entities
     - Write Conversation entity with agent and user relationships
     - Write Message entity with role, content, and tool execution tracking
     - Write InteractionMetrics entity for monitoring data
+
+
     - _Requirements: 4.1, 4.3, 4.4_
   
   - [ ] 2.3 Create document and vector store entities
     - Write Document entity with metadata and status tracking
+
+
     - Write DocumentEmbedding entity with pgvector support
     - Configure vector similarity search indexes
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
