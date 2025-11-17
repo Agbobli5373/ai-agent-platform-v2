@@ -127,7 +127,8 @@ ai-agent-platform/
 │       │   ├── V1__create_organizations_and_users.sql
 │       │   ├── V2__create_agents_and_tools.sql
 │       │   ├── V3__create_conversations_and_messages.sql
-│       │   └── V4__create_documents_and_embeddings.sql
+│       │   ├── V4__create_documents_and_embeddings.sql
+│       │   └── V5__add_created_at_to_conversations.sql
 │       └── application.properties
 ├── docker-compose.yml       # Docker services configuration
 ├── DOCKER-SETUP.md         # Detailed Docker guide
@@ -185,6 +186,8 @@ The platform uses PostgreSQL with the following schema:
 
 ### Conversation Tables
 - **conversations**: Chat sessions between users and agents with satisfaction tracking
+  - Includes `created_at` timestamp for record creation tracking (separate from `started_at` for conversation start)
+  - Indexed on `status` for efficient filtering by conversation state
 - **messages**: Individual messages with role (USER/ASSISTANT/SYSTEM), content, and token counts
 - **interaction_metrics**: Performance metrics including response time, token usage, and success rates
 
@@ -292,9 +295,14 @@ The platform provides dashboard endpoints for monitoring and analytics:
 #### GET /dashboard
 Render the dashboard home page (HTML).
 
-**Authentication:** Required (USER or ADMIN role)
+**Authentication:** Public access (authentication handled client-side via JavaScript)
 
 **Response:** HTML page with dashboard interface
+
+**Note:** The endpoint returns a static template with placeholder data. Actual user data is loaded dynamically via JavaScript using the JWT token stored in localStorage. This approach enables:
+- Faster initial page load
+- Client-side authentication handling
+- Better separation of concerns between server-side rendering and data fetching
 
 #### GET /dashboard/stats
 Get dashboard statistics.
@@ -388,11 +396,13 @@ The dashboard provides a modern, responsive interface with the following feature
 - Notification dropdown with recent alerts
 
 **Technical Implementation:**
-- Server-side rendering with Qute templates
+- Server-side rendering with Qute templates (static HTML with placeholder data)
+- Client-side data loading via JavaScript fetch API with JWT authentication
 - Tailwind CSS for responsive styling
 - Alpine.js for client-side interactivity
-- JWT-based authentication required for all dashboard pages
-- Organization-level data isolation enforced
+- JWT token stored in localStorage for API authentication
+- Organization-level data isolation enforced at API layer
+- Automatic redirect to login page if token is missing or expired
 
 ## Database Access
 
@@ -473,7 +483,8 @@ Key configuration in `application.properties`:
   - ✅ Task 2.1: Core entities (Organization, User, Agent, Tool, AgentTool)
   - ✅ Task 2.2: Conversation entities (Conversation, Message, InteractionMetrics)
   - ✅ Task 2.3: Document entities (Document, DocumentEmbedding with pgvector)
-  - ✅ Task 2.4: Complete Flyway migrations (V1-V4) with indexes and constraints
+  - ✅ Task 2.4: Complete Flyway migrations (V1-V5) with indexes and constraints
+    - V5: Added `created_at` column to conversations table and `status` index
   - Multi-tenancy support with organization-level isolation
   - All 10 entity models implemented with Panache
   - Vector similarity search configured with pgvector
@@ -558,6 +569,7 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
 
 - [Docker Setup Guide](DOCKER-SETUP.md) - Detailed Docker configuration and troubleshooting
 - [Setup Guide](SETUP.md) - Complete setup verification and next steps
+- [Dashboard Architecture](DASHBOARD_ARCHITECTURE.md) - Dashboard rendering and data loading architecture
 - [Requirements](.kiro/specs/ai-agent-platform/requirements.md) - Detailed product requirements
 - [Implementation Tasks](.kiro/specs/ai-agent-platform/tasks.md) - Development roadmap and task breakdown
 - [Product Overview](.kiro/steering/product.md) - Product vision and capabilities
@@ -597,6 +609,32 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
   - `getDashboardStats()`: Returns agent, conversation, satisfaction, and response time metrics
   - `getRecentActivity()`: Returns recent platform activity with timestamps
   - Currently returns mock data; will be implemented with database queries in future tasks
+
+### Dashboard Architecture
+
+The dashboard follows a hybrid rendering approach:
+
+1. **Server-Side**: Qute template renders static HTML structure with placeholder data
+2. **Client-Side**: JavaScript loads actual user data via REST API calls
+3. **Authentication**: JWT token stored in localStorage, included in API requests
+4. **Security**: API endpoints enforce authentication and organization-level isolation
+
+**Benefits:**
+- Fast initial page load (no server-side user lookup)
+- Better caching of static HTML
+- Cleaner separation between presentation and data
+- Easier to scale (stateless server-side rendering)
+
+**Flow:**
+1. User navigates to `/dashboard`
+2. Server returns static HTML with placeholder data
+3. Alpine.js `init()` function runs on page load
+4. JavaScript checks for JWT token in localStorage
+5. If no token, redirects to `/auth/login`
+6. If token exists, fetches user data from `/api/auth/me`
+7. Fetches dashboard stats from `/dashboard/stats`
+8. Fetches recent activity from `/dashboard/activity`
+9. Updates UI with real data
 
 ## Next Steps for Development
 

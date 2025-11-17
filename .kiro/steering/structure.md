@@ -70,7 +70,8 @@ src/main/
 │   │   ├── V1__create_users_orgs.sql
 │   │   ├── V2__create_agents_tools.sql
 │   │   ├── V3__create_conversations.sql
-│   │   └── V4__create_documents_vectors.sql
+│   │   ├── V4__create_documents_vectors.sql
+│   │   └── V5__add_created_at_to_conversations.sql
 │   └── application.properties      # Configuration
 └── test/                           # Test code
     └── java/

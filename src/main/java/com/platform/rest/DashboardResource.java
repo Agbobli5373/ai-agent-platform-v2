@@ -1,6 +1,5 @@
 package com.platform.rest;
 
-import com.platform.domain.User;
 import com.platform.service.DashboardService;
 
 import io.quarkus.qute.Template;
@@ -10,9 +9,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
-import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.SecurityContext;
 
 @Path("/dashboard")
 public class DashboardResource {
@@ -26,53 +23,16 @@ public class DashboardResource {
 
     @GET
     @Produces(MediaType.TEXT_HTML)
-    @RolesAllowed({ "USER", "ADMIN" })
-    public TemplateInstance home(@Context SecurityContext securityContext) {
-        // Get current user from security context
-        String userEmail = securityContext.getUserPrincipal().getName();
-        User user = User.find("email", userEmail).firstResult();
-
-        // Get user initials for avatar
-        String initials = getUserInitials(user);
-        String userName = getUserName(user);
-        String orgName = user.organization != null ? user.organization.name : "My Organization";
-
+    @jakarta.annotation.security.PermitAll
+    public TemplateInstance home() {
+        // Return dashboard template without user data
+        // User data will be loaded via JavaScript using the JWT token
         return dashboardHome
-                .data("userInitials", initials)
-                .data("userName", userName)
-                .data("userEmail", user.email)
-                .data("userRole", user.role)
-                .data("currentOrgName", orgName);
-    }
-
-    private String getUserInitials(User user) {
-        if (user.email == null || user.email.isEmpty()) {
-            return "U";
-        }
-        String[] parts = user.email.split("@")[0].split("\\.");
-        if (parts.length >= 2) {
-            return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
-        }
-        return user.email.substring(0, Math.min(2, user.email.length())).toUpperCase();
-    }
-
-    private String getUserName(User user) {
-        if (user.email == null || user.email.isEmpty()) {
-            return "User";
-        }
-        String localPart = user.email.split("@")[0];
-        String[] parts = localPart.split("\\.");
-        if (parts.length >= 2) {
-            return capitalize(parts[0]) + " " + capitalize(parts[1]);
-        }
-        return capitalize(localPart);
-    }
-
-    private String capitalize(String str) {
-        if (str == null || str.isEmpty()) {
-            return str;
-        }
-        return str.substring(0, 1).toUpperCase() + str.substring(1).toLowerCase();
+                .data("userInitials", "U")
+                .data("userName", "User")
+                .data("userEmail", "user@example.com")
+                .data("userRole", "USER")
+                .data("currentOrgName", "My Organization");
     }
 
     @GET

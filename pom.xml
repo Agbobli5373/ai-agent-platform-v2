@@ -86,10 +86,13 @@
             <groupId>io.quarkiverse.langchain4j</groupId>
             <artifactId>quarkus-langchain4j-mistral-ai</artifactId>
         </dependency>
+        <!-- Temporarily disabled due to initialization issue -->
+        <!--
         <dependency>
             <groupId>io.quarkiverse.langchain4j</groupId>
             <artifactId>quarkus-langchain4j-pgvector</artifactId>
         </dependency>
+        -->
         <!-- Additional Dependencies -->
         <dependency>
             <groupId>org.mindrot</groupId>

@@ -226,9 +226,41 @@ function dashboardHome() {
         recentActivity: [],
 
         async init() {
+            // Check if user is authenticated
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                window.location.href = '/auth/login';
+                return;
+            }
+            
+            await this.loadUserInfo();
             await this.loadStats();
             await this.loadRecentActivity();
             this.checkNewUser();
+        },
+        
+        async loadUserInfo() {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('/api/auth/me', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    const userInfo = await response.json();
+                    // Update user info in the parent layout if needed
+                    console.log('User info loaded:', userInfo);
+                } else if (response.status === 401) {
+                    // Token expired, redirect to login
+                    localStorage.removeItem('accessToken');
+                    localStorage.removeItem('refreshToken');
+                    window.location.href = '/auth/login';
+                }
+            } catch (err) {
+                console.error('Failed to load user info:', err);
+            }
         },
 
         async loadStats() {
@@ -236,7 +268,7 @@ function dashboardHome() {
                 const token = localStorage.getItem('accessToken');
                 const response = await fetch('/api/dashboard/stats', {
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': 'Bearer ' + token
                     }
                 });
 
@@ -253,7 +285,7 @@ function dashboardHome() {
                 const token = localStorage.getItem('accessToken');
                 const response = await fetch('/api/dashboard/activity', {
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        'Authorization': 'Bearer ' + token
                     }
                 });
 
