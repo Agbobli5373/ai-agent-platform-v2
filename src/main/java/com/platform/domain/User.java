@@ -37,5 +37,17 @@ public class User extends PanacheEntityBase {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
+        // Normalize email to lowercase for consistency
+        if (email != null) {
+            email = email.trim().toLowerCase();
+        }
+    }
+
+    @PreUpdate
+    public void preUpdate() {
+        // Normalize email to lowercase for consistency
+        if (email != null) {
+            email = email.trim().toLowerCase();
+        }
     }
 }

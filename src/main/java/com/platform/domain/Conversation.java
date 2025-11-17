@@ -2,13 +2,19 @@ package com.platform.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "conversations")
+@Table(name = "conversations", indexes = {
+        @Index(name = "idx_conversations_agent_id", columnList = "agent_id"),
+        @Index(name = "idx_conversations_user_id", columnList = "user_id"),
+        @Index(name = "idx_conversations_status", columnList = "status")
+})
 public class Conversation extends PanacheEntityBase {
 
     @Id
@@ -24,6 +30,7 @@ public class Conversation extends PanacheEntityBase {
     public User user;
 
     @OneToMany(mappedBy = "conversation", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 25)
     public List<Message> messages = new ArrayList<>();
 
     @Column(name = "started_at", nullable = false)

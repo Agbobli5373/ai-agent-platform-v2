@@ -29,13 +29,27 @@ set MISTRAL_API_KEY=your-api-key-here
 export MISTRAL_API_KEY=your-api-key-here
 ```
 
-### 3. Run the Application
+### 3. Generate JWT Keys (First Time Only)
+
+The application requires RSA key pair for JWT token signing:
+
+```bash
+# Generate private key
+openssl genrsa -out src/main/resources/privateKey.pem 2048
+
+# Generate public key
+openssl rsa -in src/main/resources/privateKey.pem -pubout -out src/main/resources/publicKey.pem
+```
+
+**Note**: These keys are for development only. In production, use secure key management (e.g., HashiCorp Vault, AWS KMS).
+
+### 4. Run the Application
 
 ```bash
 ./mvnw quarkus:dev
 ```
 
-### 4. Access the Application
+### 5. Access the Application
 
 - **Web UI**: http://localhost:8080 (currently shows Quarkus welcome page)
 - **Dev UI**: http://localhost:8080/q/dev
@@ -50,11 +64,12 @@ export MISTRAL_API_KEY=your-api-key-here
 - **AI Framework**: LangChain4j 0.21.0
 - **LLM Provider**: Mistral AI
 - **Database**: PostgreSQL 15+ with pgvector extension
-- **Caching**: Redis 7
-- **Security**: SmallRye JWT
+- **Caching**: Redis 7 (session storage)
+- **Security**: SmallRye JWT with BCrypt password hashing
 - **Database Migration**: Flyway
 - **WebSocket**: Quarkus WebSockets Next
 - **Monitoring**: Micrometer with Prometheus
+- **Validation**: Hibernate Validator
 
 ### Frontend
 - **Template Engine**: Qute (server-side rendering)
@@ -79,13 +94,32 @@ ai-agent-platform/
 │   │   │   ├── InteractionMetrics.java
 │   │   │   ├── Document.java
 │   │   │   └── DocumentEmbedding.java
-│   │   ├── service/         # Business logic
-│   │   ├── repository/      # Data access (Panache)
-│   │   ├── rest/            # REST API endpoints
+│   │   ├── service/         # Business logic (🔄 Partial)
+│   │   │   ├── AuthenticationService.java (✅)
+│   │   │   ├── AuthorizationService.java (✅)
+│   │   │   └── RegistrationService.java (✅)
+│   │   ├── repository/      # Data access (🔄 Partial)
+│   │   │   └── UserRepository.java (✅)
+│   │   ├── rest/            # REST API endpoints (🔄 Partial)
+│   │   │   ├── AuthResource.java (✅)
+│   │   │   ├── AuthPageResource.java (✅)
+│   │   │   └── HomeResource.java (✅)
 │   │   ├── websocket/       # WebSocket endpoints
 │   │   ├── ai/              # AI service interfaces
-│   │   ├── security/        # Security and auth
-│   │   └── exception/       # Exception handlers
+│   │   ├── security/        # Security and auth (✅ Implemented)
+│   │   │   ├── JwtTokenProvider.java
+│   │   │   ├── PasswordHasher.java
+│   │   │   ├── Role.java
+│   │   │   ├── Permission.java
+│   │   │   ├── RequiresPermission.java
+│   │   │   ├── PermissionInterceptor.java
+│   │   │   ├── RBACPolicy.java
+│   │   │   └── dto/ (AuthenticationResponse, LoginRequest, etc.)
+│   │   └── exception/       # Exception handlers (✅ Implemented)
+│   │       ├── GlobalExceptionHandler.java
+│   │       ├── AuthenticationException.java
+│   │       ├── AuthorizationException.java
+│   │       └── ValidationException.java
 │   └── resources/
 │       ├── templates/       # Qute templates
 │       ├── META-INF/resources/  # Static assets (css, js, images)
@@ -140,10 +174,13 @@ docker-compose down -v
 The platform uses PostgreSQL with the following schema:
 
 ### Core Tables
-- **organizations**: Multi-tenant organization management with usage limits and settings (JSONB)
+- **organizations**: Multi-tenant organization management with usage limits and settings
+  - Uses `@JdbcTypeCode(SqlTypes.JSON)` for JSONB columns (usage_limit, settings)
+  - Provides flexible configuration storage without schema changes
 - **users**: User accounts with email authentication, roles, and organization relationships
 - **agents**: AI agent configurations with system prompts, status, and model settings
-- **tools**: External API integrations with authentication configs and parameters (JSONB)
+- **tools**: External API integrations with authentication configs and parameters
+  - Uses `@JdbcTypeCode(SqlTypes.JSON)` for flexible API configuration storage
 - **agent_tools**: Many-to-many junction table linking agents to their available tools
 
 ### Conversation Tables
@@ -159,11 +196,94 @@ The platform uses PostgreSQL with the following schema:
 
 ### Key Features
 - UUID primary keys for all tables
-- JSONB columns for flexible configuration storage
+- JSON/JSONB columns using Hibernate's `@JdbcTypeCode(SqlTypes.JSON)` for type-safe, portable configuration storage
 - Comprehensive indexing for query performance
 - Foreign key constraints with CASCADE deletes where appropriate
 - Multi-tenancy via organization_id filtering
 - pgvector extension for semantic search capabilities
+
+## API Endpoints
+
+### Authentication API
+
+The platform provides REST endpoints for user authentication and authorization:
+
+#### POST /api/auth/register
+Register a new user account.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!",
+  "organizationName": "My Organization"
+}
+```
+
+**Response:** 201 Created with authentication tokens
+
+#### POST /api/auth/login
+Authenticate and receive access tokens.
+
+**Request Body:**
+```json
+{
+  "email": "user@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+**Response:**
+```json
+{
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc...",
+  "expiresIn": 86400,
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "role": "USER",
+    "organizationId": "uuid"
+  }
+}
+```
+
+#### POST /api/auth/logout
+Invalidate the current session (requires authentication).
+
+#### POST /api/auth/refresh
+Refresh access token using refresh token (requires authentication with refresh token).
+
+#### GET /api/auth/me
+Get current authenticated user information (requires authentication).
+
+**Response:**
+```json
+{
+  "id": "uuid",
+  "email": "user@example.com",
+  "role": "USER",
+  "organizationId": "uuid"
+}
+```
+
+### Testing Authentication
+
+```bash
+# Register a new user
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123!","organizationName":"Test Org"}'
+
+# Login
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"Test123!"}'
+
+# Get current user (replace TOKEN with actual token)
+curl -X GET http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer TOKEN"
+```
 
 ## Database Access
 
@@ -180,6 +300,9 @@ psql -h localhost -p 5433 -U postgres -d ai_agent_platform
 ```bash
 # Connect to Redis CLI
 docker exec -it ai-agent-redis redis-cli
+
+# Check active sessions
+docker exec -it ai-agent-redis redis-cli KEYS "session:*"
 ```
 
 ## Configuration
@@ -196,7 +319,15 @@ Key configuration in `application.properties`:
 ### Redis
 - **Port**: 6380 (to avoid conflicts with default Redis)
 - **Timeout**: 10 seconds
-- **Usage**: Session management and chat memory (planned)
+- **Usage**: Session management (active), chat memory (planned)
+
+### Security & JWT
+- **Issuer**: https://ai-agent-platform.com
+- **Access Token Duration**: 24 hours
+- **Refresh Token Duration**: 168 hours (7 days)
+- **Key Files**: privateKey.pem (signing), publicKey.pem (verification)
+- **Session Storage**: Redis with 24-hour expiration
+- **Password Hashing**: BCrypt with strength 12
 
 ### HTTP Server
 - **Port**: 8080
@@ -229,16 +360,42 @@ Key configuration in `application.properties`:
   - Tailwind CSS and Alpine.js (via CDN)
   - Application configuration and Docker setup
 
-- ✅ **Task 2**: Database schema and entity models
-  - Core entities: Organization, User, Agent, Tool, AgentTool
-  - Conversation entities: Conversation, Message, InteractionMetrics
-  - Document entities: Document, DocumentEmbedding with pgvector support
-  - Complete Flyway migrations (V1-V4) with indexes and constraints
+- ✅ **Task 2**: Database schema and entity models (COMPLETE)
+  - ✅ Task 2.1: Core entities (Organization, User, Agent, Tool, AgentTool)
+  - ✅ Task 2.2: Conversation entities (Conversation, Message, InteractionMetrics)
+  - ✅ Task 2.3: Document entities (Document, DocumentEmbedding with pgvector)
+  - ✅ Task 2.4: Complete Flyway migrations (V1-V4) with indexes and constraints
   - Multi-tenancy support with organization-level isolation
+  - All 10 entity models implemented with Panache
+  - Vector similarity search configured with pgvector
 
 ### In Progress
+- 🔄 **Task 3**: Authentication and authorization service (IN PROGRESS)
+  - ✅ Task 3.1: Authentication service with JWT support
+    - AuthenticationService with login and session management
+    - JwtTokenProvider for token generation and validation
+    - PasswordHasher utility using BCrypt
+    - UserRepository with Panache queries
+    - Redis-based session storage
+  - ✅ Task 3.2: Role-based access control (PARTIAL)
+    - RBAC policy engine with permission checking
+    - Role definitions (ADMIN, USER, VIEWER)
+    - Permission enum and RequiresPermission annotation
+    - PermissionInterceptor for method-level authorization
+    - AuthorizationService for context-aware permission checks
+    - Organization-level multi-tenancy isolation
+  - ✅ Task 3.3: Authentication REST endpoints
+    - POST /api/auth/login - User authentication
+    - POST /api/auth/logout - Session invalidation
+    - POST /api/auth/refresh - Token refresh
+    - POST /api/auth/register - User registration
+    - GET /api/auth/me - Current user info
+    - Secured with @PermitAll and @Authenticated annotations
+  - ⏳ Task 3.4: Authentication and registration UI with Qute (PENDING)
+  - ⏳ Task 3.5: Authentication service tests (PENDING)
+
 The following features are planned and documented in `.kiro/specs/ai-agent-platform/`:
-- 🔄 Authentication and authorization (Task 3)
+- 🔄 Authentication and authorization (Task 3) - Partially complete
 - 🔄 Dashboard layout and navigation (Task 4)
 - 🔄 Agent wizard service and UI (Task 5)
 - 🔄 LangChain4j AI services integration (Task 6)
@@ -274,14 +431,48 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
 - [Technology Stack](.kiro/steering/tech.md) - Technical architecture and dependencies
 - [Project Structure](.kiro/steering/structure.md) - Code organization and conventions
 
+## Security Implementation
+
+### Authentication Flow
+1. User registers via `/api/auth/register` with email, password, and organization name
+2. Password is hashed using BCrypt (strength 12) before storage
+3. User logs in via `/api/auth/login` with credentials
+4. System validates credentials and generates JWT access token (24h) and refresh token (7d)
+5. Session is stored in Redis with 24-hour expiration
+6. Access token must be included in `Authorization: Bearer <token>` header for protected endpoints
+7. User can refresh token via `/api/auth/refresh` before expiration
+8. User can logout via `/api/auth/logout` to invalidate session
+
+### Authorization
+- **Roles**: ADMIN, USER, VIEWER
+- **Permissions**: Granular permissions (e.g., AGENT_CREATE, AGENT_DELETE, TOOL_MANAGE)
+- **RBAC Policy**: Role-based access control with permission checking
+- **Multi-Tenancy**: Organization-level isolation enforced at all layers
+- **Method Security**: `@RequiresPermission` annotation for method-level authorization
+- **Endpoint Security**: `@Authenticated` and `@PermitAll` annotations for REST endpoints
+
+### Key Security Classes
+- **JwtTokenProvider**: Generates and validates JWT tokens
+- **PasswordHasher**: BCrypt password hashing and verification
+- **AuthenticationService**: Login, logout, session management
+- **AuthorizationService**: Permission checking and context management
+- **PermissionInterceptor**: CDI interceptor for method-level authorization
+- **RBACPolicy**: Role-to-permission mapping
+
 ## Next Steps for Development
 
 To continue implementation, follow the task breakdown in `.kiro/specs/ai-agent-platform/tasks.md`:
 
-1. **Task 3**: Implement authentication and authorization
-   - Create JWT-based authentication service
-   - Build login/registration UI with Qute
-   - Implement RBAC with multi-tenancy
+1. **Task 3.4**: Build authentication and registration UI with Qute
+   - Create login page template
+   - Create registration page template
+   - Implement form validation and error display
+   - Add responsive design for mobile
+
+2. **Task 3.5**: Write authentication service tests
+   - Unit tests for JWT token generation
+   - Integration tests for login flow
+   - Test RBAC permission checking
 
 3. **Task 4**: Create dashboard layout
    - Build responsive base layout with Tailwind CSS
@@ -299,6 +490,44 @@ To continue implementation, follow the task breakdown in `.kiro/specs/ai-agent-p
 - Use Tailwind CSS for styling Qute templates
 - Implement multi-tenancy at all layers (database, service, UI)
 - Write tests for services and REST endpoints
+- Use `@RequiresPermission` for method-level authorization
+- Use `@Authenticated` or `@PermitAll` for REST endpoint security
+- Always validate user's organization context for multi-tenancy
+- Hash passwords with BCrypt before storage (never store plain text)
+- Include JWT token in `Authorization: Bearer <token>` header for protected endpoints
+
+## Troubleshooting
+
+### Authentication Issues
+
+**Problem**: "Invalid email or password" error
+- Verify user exists in database: `SELECT * FROM users WHERE email = 'your-email';`
+- Ensure password was hashed correctly during registration
+- Check Redis connection for session storage
+
+**Problem**: "JWT token validation failed"
+- Ensure `privateKey.pem` and `publicKey.pem` exist in `src/main/resources/`
+- Verify token hasn't expired (24h for access token)
+- Check token is included in `Authorization: Bearer <token>` header
+- Use refresh token endpoint if access token expired
+
+**Problem**: "Insufficient permissions" error
+- Verify user role in database: `SELECT role FROM users WHERE id = 'user-id';`
+- Check permission requirements in `@RequiresPermission` annotation
+- Ensure user belongs to correct organization for multi-tenancy
+
+**Problem**: Redis connection failed
+- Verify Redis is running: `docker ps | grep redis`
+- Check Redis port (6380): `docker exec -it ai-agent-redis redis-cli ping`
+- Restart Redis: `docker-compose restart redis`
+
+### Database Issues
+
+**Problem**: Flyway migration failed
+- Check migration scripts in `src/main/resources/db/migration/`
+- Verify PostgreSQL is running and accessible on port 5433
+- Check database exists: `docker exec -it ai-agent-postgres psql -U postgres -l`
+- Reset database (⚠️ deletes all data): `docker-compose down -v && docker-compose up -d`
 
 ## Support
 
@@ -308,6 +537,7 @@ For issues or questions:
 - **Mistral AI**: https://docs.mistral.ai/
 - **Panache**: https://quarkus.io/guides/hibernate-orm-panache
 - **Qute**: https://quarkus.io/guides/qute
+- **SmallRye JWT**: https://quarkus.io/guides/security-jwt
 
 ## License
 

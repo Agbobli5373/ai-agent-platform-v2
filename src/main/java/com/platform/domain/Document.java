@@ -2,11 +2,17 @@ package com.platform.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "documents")
+@Table(name = "documents", indexes = {
+        @Index(name = "idx_documents_organization_id", columnList = "organization_id"),
+        @Index(name = "idx_documents_status", columnList = "status")
+})
 public class Document extends PanacheEntityBase {
 
     @Id
@@ -36,7 +42,8 @@ public class Document extends PanacheEntityBase {
     @Column(name = "indexed_at")
     public LocalDateTime indexedAt;
 
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata")
     public String metadata;
 
     @PrePersist

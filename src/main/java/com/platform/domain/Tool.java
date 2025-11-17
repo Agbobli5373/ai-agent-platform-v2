@@ -2,11 +2,17 @@ package com.platform.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "tools")
+@Table(name = "tools", indexes = {
+        @Index(name = "idx_tools_owner_id", columnList = "owner_id"),
+        @Index(name = "idx_tools_type", columnList = "type")
+})
 public class Tool extends PanacheEntityBase {
 
     @Id
@@ -30,10 +36,12 @@ public class Tool extends PanacheEntityBase {
     @Column(nullable = false, columnDefinition = "TEXT")
     public String endpoint;
 
-    @Column(name = "auth_config", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "auth_config")
     public String authConfig;
 
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "parameters")
     public String parameters;
 
     @Column(name = "created_at", nullable = false)

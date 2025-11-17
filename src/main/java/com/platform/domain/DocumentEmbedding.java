@@ -31,7 +31,8 @@ public class DocumentEmbedding extends PanacheEntityBase {
     @JdbcTypeCode(SqlTypes.VECTOR)
     public float[] embedding;
 
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "metadata")
     public String metadata;
 
     @Column(name = "created_at", nullable = false)

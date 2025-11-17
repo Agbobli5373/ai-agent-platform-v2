@@ -2,13 +2,21 @@ package com.platform.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "agents")
+@Table(name = "agents", indexes = {
+        @Index(name = "idx_agents_organization_id", columnList = "organization_id"),
+        @Index(name = "idx_agents_owner_id", columnList = "owner_id"),
+        @Index(name = "idx_agents_status", columnList = "status")
+})
 public class Agent extends PanacheEntityBase {
 
     @Id
@@ -40,6 +48,7 @@ public class Agent extends PanacheEntityBase {
     public String modelName;
 
     @OneToMany(mappedBy = "agent", cascade = CascadeType.ALL, orphanRemoval = true)
+    @BatchSize(size = 25)
     public List<AgentTool> tools = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false)
@@ -48,7 +57,8 @@ public class Agent extends PanacheEntityBase {
     @Column(name = "updated_at", nullable = false)
     public LocalDateTime updatedAt;
 
-    @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "configuration")
     public String configuration;
 
     @PrePersist

@@ -13,13 +13,7 @@
   - _Requirements: 1.1, 1.3, 2.1, 2.4, 9.1_
 
 - [x] 2. Implement database schema and entity models
-
-
-
-
   - [x] 2.1 Create core entity classes with Panache
-
-
     - Write Organization entity with usage limits and settings
     - Write User entity with authentication fields and organization relationship
     - Write Agent entity with configuration, status, and relationships
@@ -27,50 +21,59 @@
     - Write AgentTool junction entity for many-to-many relationship
     - _Requirements: 1.1, 2.1, 3.1, 3.2_
   
-
-
-  - [ ] 2.2 Create conversation and messaging entities
+  - [x] 2.2 Create conversation and messaging entities
     - Write Conversation entity with agent and user relationships
     - Write Message entity with role, content, and tool execution tracking
     - Write InteractionMetrics entity for monitoring data
-
-
     - _Requirements: 4.1, 4.3, 4.4_
   
-  - [ ] 2.3 Create document and vector store entities
+  - [x] 2.3 Create document and vector store entities
     - Write Document entity with metadata and status tracking
-
-
     - Write DocumentEmbedding entity with pgvector support
     - Configure vector similarity search indexes
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
   
-  - [ ] 2.4 Create database migration scripts
+  - [x] 2.4 Create database migration scripts
     - Write Flyway/Liquibase migration for organizations and users tables
     - Write migration for agents and tools tables with indexes
     - Write migration for conversations and messages tables
     - Write migration for documents and embeddings tables with vector extension
     - _Requirements: 2.1, 2.4, 6.2_
 
-- [ ] 3. Implement authentication and authorization service
-  - [ ] 3.1 Create authentication service with JWT support
+- [x] 3. Implement authentication and authorization service
+
+
+
+  - [x] 3.1 Create authentication service with JWT support
+
+
     - Write AuthenticationService with login and session creation methods
     - Implement JWT token generation and validation
     - Create password hashing utility using BCrypt
     - Write User repository with Panache queries
     - _Requirements: 2.1, 2.2, 2.4_
+
   
+
+
   - [ ] 3.2 Implement role-based access control
     - Write RBAC policy engine with permission checking
     - Create role definitions (Admin, User, Viewer)
+
     - Implement organization-level multi-tenancy isolation
     - Write authorization interceptor for REST endpoints
+
+
     - _Requirements: 2.3, 2.4_
   
-  - [ ] 3.3 Create authentication REST endpoints
+  - [x] 3.3 Create authentication REST endpoints
+
+
     - Write login endpoint with credential validation
     - Write logout endpoint with session invalidation
     - Write token refresh endpoint
+
+
     - Write user registration endpoint with validation
     - Secure endpoints with @RolesAllowed annotations
     - _Requirements: 2.1, 2.2, 5.2_

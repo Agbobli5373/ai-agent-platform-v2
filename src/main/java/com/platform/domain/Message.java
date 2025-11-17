@@ -2,11 +2,17 @@ package com.platform.domain;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "messages")
+@Table(name = "messages", indexes = {
+        @Index(name = "idx_messages_conversation_id", columnList = "conversation_id"),
+        @Index(name = "idx_messages_timestamp", columnList = "timestamp")
+})
 public class Message extends PanacheEntityBase {
 
     @Id
@@ -27,7 +33,8 @@ public class Message extends PanacheEntityBase {
     @Column(nullable = false)
     public LocalDateTime timestamp;
 
-    @Column(name = "tool_executions", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "tool_executions")
     public String toolExecutions;
 
     @Column(name = "token_count")
