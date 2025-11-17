@@ -285,6 +285,115 @@ curl -X GET http://localhost:8080/api/auth/me \
   -H "Authorization: Bearer TOKEN"
 ```
 
+### Dashboard API
+
+The platform provides dashboard endpoints for monitoring and analytics:
+
+#### GET /dashboard
+Render the dashboard home page (HTML).
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Response:** HTML page with dashboard interface
+
+#### GET /dashboard/stats
+Get dashboard statistics.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Response:**
+```json
+{
+  "totalAgents": 0,
+  "totalConversations": 0,
+  "satisfactionScore": 0,
+  "avgResponseTime": 0.0
+}
+```
+
+#### GET /dashboard/activity
+Get recent activity feed.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "type": "agent_created",
+    "message": "New agent created successfully",
+    "timestamp": "2024-11-17 10:30:00"
+  }
+]
+```
+
+**Activity Types:**
+- `agent_created` - New agent was created
+- `conversation` - New conversation started
+- `tool_added` - New tool was registered
+- `document_uploaded` - Document was uploaded
+
+### Testing Dashboard
+
+```bash
+# Access dashboard home page (requires authentication)
+# Login first, then navigate to: http://localhost:8080/dashboard
+
+# Get dashboard stats (replace TOKEN with actual token)
+curl -X GET http://localhost:8080/dashboard/stats \
+  -H "Authorization: Bearer TOKEN"
+
+# Get recent activity (replace TOKEN with actual token)
+curl -X GET http://localhost:8080/dashboard/activity \
+  -H "Authorization: Bearer TOKEN"
+```
+
+### Dashboard Features
+
+The dashboard provides a modern, responsive interface with the following features:
+
+**Layout Components:**
+- Collapsible sidebar navigation (desktop) - toggles between expanded and collapsed states
+- Mobile slide-out sidebar with overlay backdrop
+- Top navigation bar with breadcrumbs, notifications, and user profile
+- User profile dropdown with organization switcher
+- Dark mode toggle (optional feature)
+- Responsive footer with documentation links
+
+**Home Page:**
+- Quick stats cards showing:
+  - Total agents with monthly growth indicator
+  - Total conversations with weekly comparison
+  - Customer satisfaction score with improvement percentage
+  - Average response time with performance delta
+- Recent activity feed with type-based color coding:
+  - `agent_created` (blue) - New agent created
+  - `conversation` (green) - New conversation started
+  - `tool_added` (purple) - Tool registered
+  - `document_uploaded` (orange) - Document uploaded
+- Quick action buttons for common tasks:
+  - Create Agent - Launch wizard
+  - Add Tool - Register API integration
+  - Upload Document - Add to knowledge base
+  - View Docs - Access documentation
+- Welcome banner for new users (shown when no agents exist)
+
+**Interactive Features:**
+- Real-time data loading via Alpine.js
+- Smooth transitions and animations
+- Touch-optimized for mobile devices
+- Persistent sidebar state (saved to localStorage)
+- Active page highlighting in navigation
+- Notification dropdown with recent alerts
+
+**Technical Implementation:**
+- Server-side rendering with Qute templates
+- Tailwind CSS for responsive styling
+- Alpine.js for client-side interactivity
+- JWT-based authentication required for all dashboard pages
+- Organization-level data isolation enforced
+
 ## Database Access
 
 ```bash
@@ -394,9 +503,33 @@ Key configuration in `application.properties`:
   - ⏳ Task 3.4: Authentication and registration UI with Qute (PENDING)
   - ⏳ Task 3.5: Authentication service tests (PENDING)
 
+- ✅ **Task 4**: Modern dashboard layout and navigation (COMPLETE)
+  - ✅ Task 4.1: Base dashboard layout template
+    - Responsive dashboard layout with Tailwind CSS
+    - Collapsible sidebar navigation (desktop) with toggle
+    - Mobile slide-out sidebar with overlay
+    - Top navigation bar with user profile dropdown
+    - Breadcrumb navigation component
+    - Dark mode toggle (optional feature)
+    - Footer with documentation links
+  - ✅ Task 4.2: Dashboard home page
+    - Dashboard home template with overview cards
+    - Quick stats cards (agents, conversations, satisfaction, response time)
+    - Recent activity feed with type-based icons
+    - Quick action buttons (Create Agent, Add Tool, Upload Document, View Docs)
+    - Welcome message for new users
+    - Alpine.js integration for dynamic data loading
+  - ✅ Task 4.3: Navigation and routing
+    - Navigation menu items (Dashboard, Agents, Tools, Documents, Settings)
+    - Active page highlighting based on current path
+    - User profile dropdown with logout functionality
+    - Organization switcher component
+    - Notification bell with badge indicator
+    - Mobile-responsive navigation
+
 The following features are planned and documented in `.kiro/specs/ai-agent-platform/`:
 - 🔄 Authentication and authorization (Task 3) - Partially complete
-- 🔄 Dashboard layout and navigation (Task 4)
+- ✅ Dashboard layout and navigation (Task 4) - Complete
 - 🔄 Agent wizard service and UI (Task 5)
 - 🔄 LangChain4j AI services integration (Task 6)
 - 🔄 Agent runtime service (Task 7)
@@ -458,6 +591,12 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
 - **AuthorizationService**: Permission checking and context management
 - **PermissionInterceptor**: CDI interceptor for method-level authorization
 - **RBACPolicy**: Role-to-permission mapping
+
+### Key Service Classes
+- **DashboardService**: Dashboard statistics and activity feed
+  - `getDashboardStats()`: Returns agent, conversation, satisfaction, and response time metrics
+  - `getRecentActivity()`: Returns recent platform activity with timestamps
+  - Currently returns mock data; will be implemented with database queries in future tasks
 
 ## Next Steps for Development
 

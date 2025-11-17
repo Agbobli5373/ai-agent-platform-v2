@@ -39,6 +39,9 @@ public class Conversation extends PanacheEntityBase {
     @Column(name = "ended_at")
     public LocalDateTime endedAt;
 
+    @Column(name = "created_at", nullable = false)
+    public LocalDateTime createdAt;
+
     @Column(length = 50)
     @Enumerated(EnumType.STRING)
     public ConversationStatus status;
@@ -48,8 +51,12 @@ public class Conversation extends PanacheEntityBase {
 
     @PrePersist
     public void prePersist() {
+        LocalDateTime now = LocalDateTime.now();
         if (startedAt == null) {
-            startedAt = LocalDateTime.now();
+            startedAt = now;
+        }
+        if (createdAt == null) {
+            createdAt = now;
         }
         if (status == null) {
             status = ConversationStatus.ACTIVE;
