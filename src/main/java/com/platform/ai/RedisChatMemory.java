@@ -2,6 +2,7 @@ package com.platform.ai;
 
 import io.quarkus.redis.datasource.RedisDataSource;
 import io.quarkus.redis.datasource.value.ValueCommands;
+import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import org.jboss.logging.Logger;
@@ -17,7 +18,13 @@ public class RedisChatMemory {
 
     @Inject
     RedisDataSource redisDataSource;
+
     private ValueCommands<String, String> valueCommands;
+
+    @PostConstruct
+    void init() {
+        this.valueCommands = redisDataSource.value(String.class, String.class);
+    }
 
     public void storeMessage(Long conversationId, String role, String content) {
         try {
@@ -26,7 +33,7 @@ public class RedisChatMemory {
             List<String> messages = getMessages(conversationId);
             messages.add(message);
             String conversationData = String.join("\n", messages);
-            getValueCommands().setex(key, DEFAULT_TTL.getSeconds(), conversationData);
+            valueCommands.setex(key, DEFAULT_TTL.getSeconds(), conversationData);
             LOG.debugf("Stored message in conversation %d: %s", conversationId, message);
         } catch (Exception e) {
             LOG.errorf(e, "Failed to store message in conversation %d", conversationId);
