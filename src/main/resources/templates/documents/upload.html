@@ -1,0 +1,240 @@
+{#include layout/dashboard.html}
+
+{#title}Upload Document - AI Agent Platform{/title}
+
+{#userInitials}{userInitials}{/userInitials}
+{#userName}{userName}{/userName}
+{#userRole}{userRole}{/userRole}
+{#profileUserName}{userName}{/profileUserName}
+{#profileUserEmail}{userEmail}{/profileUserEmail}
+{#currentOrgName}{currentOrgName}{/currentOrgName}
+
+{#breadcrumbs}
+<a href="/dashboard" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+<span class="text-gray-400 mx-2">/</span>
+<a href="/documents" class="text-gray-500 hover:text-gray-700">Documents</a>
+<span class="text-gray-400 mx-2">/</span>
+<span class="text-gray-900 font-medium">Upload</span>
+{/breadcrumbs}
+
+{#content}
+<div class="max-w-3xl mx-auto" x-data="documentUpload()">
+    <!-- Header -->
+    <div class="mb-6">
+        <a href="/documents" class="text-sm text-indigo-600 hover:text-indigo-700 mb-2 inline-block">
+            ← Back to Documents
+        </a>
+        <h1 class="text-3xl font-bold text-gray-900">Upload Document</h1>
+        <p class="mt-1 text-sm text-gray-500">Upload documents to your knowledge base for semantic search</p>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="bg-white shadow sm:rounded-lg">
+        <div class="px-4 py-5 sm:p-6">
+            <form @submit.prevent="uploadDocument">
+                <!-- Drag and Drop Area -->
+                <div @click="$refs.fileInput.click()"
+                     @dragover.prevent="dragOver = true"
+                     @dragleave.prevent="dragOver = false"
+                     @drop.prevent="handleDrop"
+                     :class="dragOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'"
+                     class="border-2 border-dashed rounded-lg p-12 text-center hover:border-indigo-500 transition-colors cursor-pointer">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <p class="mt-2 text-sm text-gray-600">
+                        <span class="font-medium text-indigo-600 hover:text-indigo-500">Click to upload</span>
+                        or drag and drop
+                    </p>
+                    <p class="mt-1 text-xs text-gray-500">PDF, DOCX, or TXT up to 10MB</p>
+                    <input type="file" 
+                           x-ref="fileInput"
+                           @change="handleFileSelect"
+                           accept=".pdf,.docx,.doc,.txt"
+                           class="hidden">
+                </div>
+
+                <!-- Selected File Display -->
+                <div x-show="selectedFile" class="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <svg class="h-8 w-8 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <div>
+                                <p class="text-sm font-medium text-gray-900" x-text="selectedFile?.name"></p>
+                                <p class="text-xs text-gray-500" x-text="formatFileSize(selectedFile?.size)"></p>
+                            </div>
+                        </div>
+                        <button type="button" 
+                                @click="clearFile" 
+                                class="text-gray-400 hover:text-gray-600">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Progress Bar -->
+                <div x-show="uploading" class="mt-4">
+                    <div class="flex justify-between text-sm text-gray-600 mb-1">
+                        <span>Uploading...</span>
+                        <span x-text="uploadProgress + '%'"></span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="bg-indigo-600 h-2 rounded-full transition-all" 
+                             :style="'width: ' + uploadProgress + '%'"></div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div x-show="errorMessage" class="mt-4 p-4 bg-red-50 rounded-lg">
+                    <div class="flex">
+                        <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="ml-3 text-sm text-red-700" x-text="errorMessage"></p>
+                    </div>
+                </div>
+
+                <!-- Upload Button -->
+                <div class="mt-6 flex justify-end space-x-3">
+                    <a href="/documents" 
+                       class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" 
+                            :disabled="!selectedFile || uploading"
+                            class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        Upload Document
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{/content}
+
+{#scripts}
+<script>
+function documentUpload() {
+    return {
+        selectedFile: null,
+        uploading: false,
+        uploadProgress: 0,
+        errorMessage: '',
+        dragOver: false,
+
+        async init() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                window.location.href = '/auth/login';
+                return;
+            }
+        },
+
+        handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                this.validateAndSetFile(file);
+            }
+        },
+
+        handleDrop(event) {
+            this.dragOver = false;
+            const file = event.dataTransfer.files[0];
+            if (file) {
+                this.validateAndSetFile(file);
+            }
+        },
+
+        validateAndSetFile(file) {
+            this.errorMessage = '';
+            
+            // Check file size (10MB limit)
+            if (file.size > 10 * 1024 * 1024) {
+                this.errorMessage = 'File size must be less than 10MB';
+                return;
+            }
+
+            // Check file type
+            const allowedTypes = ['.pdf', '.docx', '.doc', '.txt'];
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            if (!allowedTypes.includes(fileExt)) {
+                this.errorMessage = 'Only PDF, DOCX, and TXT files are allowed';
+                return;
+            }
+
+            this.selectedFile = file;
+        },
+
+        clearFile() {
+            this.selectedFile = null;
+            this.$refs.fileInput.value = '';
+            this.errorMessage = '';
+        },
+
+        async uploadDocument() {
+            if (!this.selectedFile) return;
+
+            this.uploading = true;
+            this.uploadProgress = 0;
+            this.errorMessage = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const formData = new FormData();
+                formData.append('file', this.selectedFile);
+                formData.append('fileName', this.selectedFile.name);
+                formData.append('contentType', this.selectedFile.type || 'application/octet-stream');
+
+                const response = await fetch('/api/documents/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Simulate progress
+                    let progress = 0;
+                    const interval = setInterval(() => {
+                        progress += 10;
+                        this.uploadProgress = progress;
+                        
+                        if (progress >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                window.location.href = '/documents';
+                            }, 500);
+                        }
+                    }, 200);
+                } else if (response.status === 401) {
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/auth/login';
+                } else {
+                    const error = await response.text();
+                    this.errorMessage = 'Upload failed: ' + error;
+                    this.uploading = false;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                this.errorMessage = 'Upload failed. Please try again.';
+                this.uploading = false;
+            }
+        },
+
+        formatFileSize(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+    }
+}
+</script>
+{/scripts}
+
+{/include}

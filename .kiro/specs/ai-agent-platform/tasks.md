@@ -330,22 +330,22 @@
     - Test tool integration with LangChain4j
     - _Requirements: 3.1, 3.2, 3.3, 3.4_
 
-- [ ] 9. Implement vector store and document indexing
-  - [ ] 9.1 Create vector store service
+- [x] 9. Implement vector store and document indexing
+  - [x] 9.1 Create vector store service
     - Write VectorStoreService with document indexing
     - Implement semantic search with pgvector
     - Create embedding generation using LangChain4j
     - Write document chunking strategy (500 tokens per chunk)
     - _Requirements: 6.1, 6.2, 6.3, 6.4_
   
-  - [ ] 9.2 Implement document upload and processing
+  - [x] 9.2 Implement document upload and processing
     - Write document upload endpoint with multipart support
     - Create document parser for PDF, DOCX, TXT formats
     - Implement async document processing with background jobs
     - Write progress tracking for indexing status
     - _Requirements: 6.1, 6.2_
   
-  - [ ] 9.3 Create document management UI with Qute
+  - [x] 9.3 Create document management UI with Qute
     - Write document list page template with Tailwind styling
     - Create document upload interface with drag-and-drop
     - Implement upload progress indicator
@@ -354,7 +354,7 @@
     - Implement document delete functionality
     - _Requirements: 6.1, 9.1, 9.2_
   
-  - [ ] 9.4 Create vector search functionality
+  - [x] 9.4 Create vector search functionality
     - Write semantic search method with cosine similarity
     - Implement search filters (organization, document type)
     - Create result ranking and relevance scoring

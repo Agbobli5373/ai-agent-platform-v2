@@ -32,6 +32,9 @@ public class Document extends PanacheEntityBase {
     @Column(name = "size_bytes", nullable = false)
     public Long sizeBytes;
 
+    @Column(columnDefinition = "TEXT")
+    public String content;
+
     @Column(nullable = false, length = 50)
     @Enumerated(EnumType.STRING)
     public DocumentStatus status;
