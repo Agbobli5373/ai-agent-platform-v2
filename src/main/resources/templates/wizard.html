@@ -1,0 +1,609 @@
+{#include layout/dashboard.html}
+
+{#title}Create Agent - AI Agent Platform{/title}
+
+{#userInitials}{userInitials}{/userInitials}
+
+{#userName}{userName}{/userName}
+
+{#userRole}{userRole}{/userRole}
+
+{#profileUserName}{userName}{/profileUserName}
+
+{#profileUserEmail}{userEmail}{/profileUserEmail}
+
+{#currentOrgName}{currentOrgName}{/currentOrgName}
+
+{#breadcrumbs}
+<a href="/dashboard" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+<svg class="w-4 h-4 text-gray-400 mx-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+</svg>
+<span class="text-gray-900 font-medium">Create Agent</span>
+{/breadcrumbs}
+
+{#content}
+<div x-data="agentWizard()" x-cloak>
+    <!-- Wizard Container -->
+    <div class="max-w-4xl mx-auto">
+        <!-- Progress Steps -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between">
+                <template x-for="(step, index) in steps" :key="step.id">
+                    <div class="flex items-center" :class="{ 'flex-1': index < steps.length - 1 }">
+                        <!-- Step Circle -->
+                        <div class="relative flex flex-col items-center">
+                            <div 
+                                class="w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all"
+                                :class="{
+                                    'bg-blue-600 text-white': currentStep === step.id,
+                                    'bg-green-600 text-white': isStepCompleted(step.id),
+                                    'bg-gray-200 text-gray-600': !isStepCompleted(step.id) && currentStep !== step.id
+                                }"
+                            >
+                                <span x-show="!isStepCompleted(step.id)" x-text="index + 1"></span>
+                                <svg x-show="isStepCompleted(step.id)" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <span 
+                                class="absolute top-12 text-xs font-medium whitespace-nowrap"
+                                :class="{
+                                    'text-blue-600': currentStep === step.id,
+                                    'text-green-600': isStepCompleted(step.id),
+                                    'text-gray-500': !isStepCompleted(step.id) && currentStep !== step.id
+                                }"
+                                x-text="step.name"
+                            ></span>
+                        </div>
+                        
+                        <!-- Connector Line -->
+                        <div 
+                            x-show="index < steps.length - 1"
+                            class="flex-1 h-1 mx-4 transition-all"
+                            :class="{
+                                'bg-green-600': isStepCompleted(steps[index + 1].id),
+                                'bg-gray-200': !isStepCompleted(steps[index + 1].id)
+                            }"
+                        ></div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Wizard Card -->
+        <div class="bg-white rounded-lg shadow-lg p-8">
+            <!-- Step 1: Purpose -->
+            <div x-show="currentStep === 'PURPOSE'" x-transition>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Define Your Agent's Purpose</h2>
+                <p class="text-gray-600 mb-6">Give your agent a name and describe what it will do.</p>
+
+                <div class="space-y-6">
+                    <div>
+                        <label for="agentName" class="block text-sm font-medium text-gray-700 mb-2">
+                            Agent Name <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="agentName"
+                            x-model="config.name"
+                            @input="validateField('name')"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="e.g., Customer Support Agent"
+                            maxlength="255"
+                        />
+                        <p x-show="errors.name" x-text="errors.name" class="mt-1 text-sm text-red-600"></p>
+                        <p class="mt-1 text-sm text-gray-500">Choose a descriptive name (3-255 characters)</p>
+                    </div>
+
+                    <div>
+                        <label for="agentDescription" class="block text-sm font-medium text-gray-700 mb-2">
+                            Description (Optional)
+                        </label>
+                        <textarea 
+                            id="agentDescription"
+                            x-model="config.description"
+                            rows="3"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            placeholder="Briefly describe what this agent will help with..."
+                            maxlength="1000"
+                        ></textarea>
+                        <p class="mt-1 text-sm text-gray-500">Optional description (max 1000 characters)</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Prompt -->
+            <div x-show="currentStep === 'PROMPT'" x-transition>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Configure System Prompt</h2>
+                <p class="text-gray-600 mb-6">Define how your agent should behave and respond.</p>
+
+                <div class="space-y-6">
+                    <div>
+                        <label for="systemPrompt" class="block text-sm font-medium text-gray-700 mb-2">
+                            System Prompt <span class="text-red-500">*</span>
+                        </label>
+                        <textarea 
+                            id="systemPrompt"
+                            x-model="config.systemPrompt"
+                            @input="validateField('systemPrompt')"
+                            rows="8"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                            placeholder="You are a helpful customer support agent. Your role is to..."
+                            maxlength="10000"
+                        ></textarea>
+                        <p x-show="errors.systemPrompt" x-text="errors.systemPrompt" class="mt-1 text-sm text-red-600"></p>
+                        <p class="mt-1 text-sm text-gray-500">
+                            Define the agent's personality, knowledge, and behavior (10-10000 characters)
+                        </p>
+                    </div>
+
+                    <div>
+                        <label for="modelName" class="block text-sm font-medium text-gray-700 mb-2">
+                            AI Model <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            id="modelName"
+                            x-model="config.modelName"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                            <option value="mistral-large-latest">Mistral Large (Recommended)</option>
+                            <option value="mistral-medium-latest">Mistral Medium</option>
+                            <option value="mistral-small-latest">Mistral Small</option>
+                        </select>
+                        <p class="mt-1 text-sm text-gray-500">Select the AI model for your agent</p>
+                    </div>
+
+                    <!-- Prompt Templates -->
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-2">💡 Prompt Tips</h4>
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>• Be specific about the agent's role and expertise</li>
+                            <li>• Define the tone (professional, friendly, technical)</li>
+                            <li>• Specify any limitations or boundaries</li>
+                            <li>• Include examples of good responses if helpful</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Tools -->
+            <div x-show="currentStep === 'TOOLS'" x-transition>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Select Tools (Optional)</h2>
+                <p class="text-gray-600 mb-6">Choose which tools your agent can use to perform actions.</p>
+
+                <div class="space-y-4">
+                    <div x-show="loading" class="text-center py-8">
+                        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        <p class="mt-2 text-gray-600">Loading available tools...</p>
+                    </div>
+
+                    <div x-show="!loading && availableTools.length === 0" class="text-center py-8">
+                        <svg class="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        </svg>
+                        <p class="text-gray-600 mb-4">No tools available yet</p>
+                        <a href="/tools/create" class="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            Create Your First Tool
+                        </a>
+                    </div>
+
+                    <template x-for="tool in availableTools" :key="tool.id">
+                        <label class="flex items-start p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                :value="tool.id"
+                                x-model="config.toolIds"
+                                class="mt-1 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <div class="ml-3 flex-1">
+                                <div class="font-medium text-gray-900" x-text="tool.name"></div>
+                                <div class="text-sm text-gray-600 mt-1" x-text="tool.description"></div>
+                                <div class="text-xs text-gray-500 mt-2">
+                                    <span class="inline-flex items-center px-2 py-1 bg-gray-100 rounded">
+                                        <span x-text="tool.type"></span>
+                                    </span>
+                                </div>
+                            </div>
+                        </label>
+                    </template>
+                </div>
+
+                <div class="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p class="text-sm text-gray-600">
+                        <strong>Note:</strong> You can skip this step and add tools later. Tools allow your agent to perform actions like calling APIs, searching databases, or integrating with external services.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 4: Preview -->
+            <div x-show="currentStep === 'PREVIEW'" x-transition>
+                <h2 class="text-2xl font-bold text-gray-900 mb-2">Preview & Deploy</h2>
+                <p class="text-gray-600 mb-6">Test your agent before deploying it.</p>
+
+                <div class="space-y-6">
+                    <!-- Configuration Summary -->
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h4 class="font-medium text-gray-900 mb-3">Configuration Summary</h4>
+                        <dl class="space-y-2 text-sm">
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Name:</dt>
+                                <dd class="font-medium text-gray-900" x-text="config.name"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Model:</dt>
+                                <dd class="font-medium text-gray-900" x-text="config.modelName"></dd>
+                            </div>
+                            <div class="flex justify-between">
+                                <dt class="text-gray-600">Tools:</dt>
+                                <dd class="font-medium text-gray-900" x-text="config.toolIds.length + ' selected'"></dd>
+                            </div>
+                        </dl>
+                    </div>
+
+                    <!-- Test Chat Interface -->
+                    <div>
+                        <label for="testPrompt" class="block text-sm font-medium text-gray-700 mb-2">
+                            Test Your Agent
+                        </label>
+                        <div class="border border-gray-300 rounded-lg overflow-hidden">
+                            <textarea 
+                                id="testPrompt"
+                                x-model="testPrompt"
+                                rows="3"
+                                class="w-full px-4 py-3 focus:ring-0 focus:outline-none"
+                                placeholder="Type a test message to see how your agent responds..."
+                            ></textarea>
+                            <div class="bg-gray-50 px-4 py-3 flex justify-end border-t border-gray-200">
+                                <button 
+                                    @click="previewAgent"
+                                    :disabled="!testPrompt || previewing"
+                                    class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                    <span x-show="!previewing">Test Agent</span>
+                                    <span x-show="previewing" class="flex items-center">
+                                        <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        Testing...
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview Response -->
+                    <div x-show="previewResponse" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <h4 class="font-medium text-blue-900 mb-2">Agent Response:</h4>
+                        <p class="text-blue-800 whitespace-pre-wrap" x-text="previewResponse"></p>
+                        <p class="text-xs text-blue-600 mt-2">Response time: <span x-text="previewResponseTime"></span>ms</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="mt-8 flex justify-between items-center pt-6 border-t border-gray-200">
+                <button 
+                    @click="previousStep"
+                    x-show="currentStepIndex > 0"
+                    class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 flex items-center"
+                >
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                    Back
+                </button>
+
+                <div class="flex space-x-3">
+                    <button 
+                        @click="saveDraft"
+                        class="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                    >
+                        Save Draft
+                    </button>
+
+                    <button 
+                        @click="nextStep"
+                        x-show="currentStepIndex < steps.length - 1"
+                        :disabled="!canProceed()"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                        Next
+                        <svg class="w-5 h-5 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+
+                    <button 
+                        @click="deployAgent"
+                        x-show="currentStepIndex === steps.length - 1"
+                        :disabled="deploying"
+                        class="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                    >
+                        <span x-show="!deploying">Deploy Agent</span>
+                        <span x-show="deploying" class="flex items-center">
+                            <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Deploying...
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/content}
+
+{#scripts}
+<script>
+function agentWizard() {
+    return {
+        sessionId: null,
+        currentStep: 'PURPOSE',
+        completedSteps: [],
+        steps: [
+            { id: 'PURPOSE', name: 'Purpose' },
+            { id: 'PROMPT', name: 'Prompt' },
+            { id: 'TOOLS', name: 'Tools' },
+            { id: 'PREVIEW', name: 'Preview' }
+        ],
+        config: {
+            name: '',
+            description: '',
+            systemPrompt: '',
+            modelName: 'mistral-large-latest',
+            toolIds: []
+        },
+        errors: {},
+        availableTools: [],
+        loading: false,
+        testPrompt: '',
+        previewResponse: '',
+        previewResponseTime: 0,
+        previewing: false,
+        deploying: false,
+
+        get currentStepIndex() {
+            return this.steps.findIndex(s => s.id === this.currentStep);
+        },
+
+        async init() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                // Redirect to login with return URL
+                window.location.href = '/auth/login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                return;
+            }
+
+            try {
+                await this.initializeSession();
+                await this.loadTools();
+            } catch (err) {
+                console.error('Initialization failed:', err);
+                // If initialization fails due to auth, redirect to login
+                if (err.message && err.message.includes('401')) {
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/auth/login?returnUrl=' + encodeURIComponent(window.location.pathname);
+                }
+            }
+        },
+
+        async initializeSession() {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch('/api/wizard/session', {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer ' + token,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.status === 401) {
+                throw new Error('401 Unauthorized');
+            }
+
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({ error: 'Failed to initialize wizard session' }));
+                throw new Error(error.error || 'Failed to initialize wizard session');
+            }
+
+            const data = await response.json();
+            this.sessionId = data.sessionId;
+        },
+
+        async loadTools() {
+            this.loading = true;
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('/api/tools', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (response.ok) {
+                    this.availableTools = await response.json();
+                }
+            } catch (err) {
+                console.error('Failed to load tools:', err);
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        validateField(field) {
+            this.errors[field] = '';
+
+            if (field === 'name') {
+                if (!this.config.name || this.config.name.trim().length === 0) {
+                    this.errors.name = 'Agent name is required';
+                } else if (this.config.name.trim().length < 3) {
+                    this.errors.name = 'Agent name must be at least 3 characters';
+                } else if (this.config.name.length > 255) {
+                    this.errors.name = 'Agent name must not exceed 255 characters';
+                }
+            }
+
+            if (field === 'systemPrompt') {
+                if (!this.config.systemPrompt || this.config.systemPrompt.trim().length === 0) {
+                    this.errors.systemPrompt = 'System prompt is required';
+                } else if (this.config.systemPrompt.trim().length < 10) {
+                    this.errors.systemPrompt = 'System prompt must be at least 10 characters';
+                } else if (this.config.systemPrompt.length > 10000) {
+                    this.errors.systemPrompt = 'System prompt must not exceed 10000 characters';
+                }
+            }
+        },
+
+        canProceed() {
+            if (this.currentStep === 'PURPOSE') {
+                return this.config.name && this.config.name.trim().length >= 3 && !this.errors.name;
+            }
+            if (this.currentStep === 'PROMPT') {
+                return this.config.systemPrompt && this.config.systemPrompt.trim().length >= 10 && !this.errors.systemPrompt;
+            }
+            return true;
+        },
+
+        isStepCompleted(stepId) {
+            const stepIndex = this.steps.findIndex(s => s.id === stepId);
+            return stepIndex < this.currentStepIndex || this.completedSteps.includes(stepId);
+        },
+
+        async nextStep() {
+            if (!this.canProceed()) return;
+
+            // Mark current step as completed
+            if (!this.completedSteps.includes(this.currentStep)) {
+                this.completedSteps.push(this.currentStep);
+            }
+
+            // Save step data
+            await this.saveStepData();
+
+            // Move to next step
+            if (this.currentStepIndex < this.steps.length - 1) {
+                this.currentStep = this.steps[this.currentStepIndex + 1].id;
+            }
+        },
+
+        previousStep() {
+            if (this.currentStepIndex > 0) {
+                this.currentStep = this.steps[this.currentStepIndex - 1].id;
+            }
+        },
+
+        async saveStepData() {
+            if (!this.sessionId) return;
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                await fetch('/api/wizard/session/' + this.sessionId + '/step', {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        step: this.currentStep,
+                        data: this.config
+                    })
+                });
+            } catch (err) {
+                console.error('Failed to save step data:', err);
+            }
+        },
+
+        async saveDraft() {
+            await this.saveStepData();
+            this.showSuccess('Draft saved successfully');
+        },
+
+        async previewAgent() {
+            this.previewing = true;
+            this.previewResponse = '';
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('/api/wizard/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        config: this.config,
+                        testPrompt: this.testPrompt
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.previewResponse = data.response;
+                    this.previewResponseTime = data.responseTimeMs;
+                } else {
+                    const error = await response.json();
+                    this.showError(error.error || 'Preview failed');
+                }
+            } catch (err) {
+                console.error('Preview failed:', err);
+                this.showError('Failed to preview agent');
+            } finally {
+                this.previewing = false;
+            }
+        },
+
+        async deployAgent() {
+            this.deploying = true;
+
+            try {
+                const token = localStorage.getItem('accessToken');
+                const response = await fetch('/api/wizard/deploy', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        config: this.config,
+                        sessionId: this.sessionId
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.showSuccess('Agent deployed successfully!');
+                    setTimeout(() => {
+                        window.location.href = '/agents';
+                    }, 1500);
+                } else {
+                    const error = await response.json();
+                    this.showError(error.error || 'Deployment failed');
+                }
+            } catch (err) {
+                console.error('Deployment failed:', err);
+                this.showError('Failed to deploy agent');
+            } finally {
+                this.deploying = false;
+            }
+        },
+
+        showSuccess(message) {
+            // Simple alert for now - can be replaced with toast notification
+            alert(message);
+        },
+
+        showError(message) {
+            // Simple alert for now - can be replaced with toast notification
+            alert('Error: ' + message);
+        }
+    }
+}
+</script>
+{/scripts}
+
+{/include}
+""

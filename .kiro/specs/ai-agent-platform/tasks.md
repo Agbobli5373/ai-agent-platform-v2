@@ -177,7 +177,12 @@
     - Write endpoint to deploy agent
     - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
   
-  - [ ] 5.4 Implement wizard validation logic
+  - [x] 5.4 Implement wizard validation logic
+
+
+
+
+
     - Write validation for agent name and description
     - Implement system prompt validation (length, content)
     - Create tool selection validation

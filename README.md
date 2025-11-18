@@ -444,6 +444,19 @@ Or if invalid:
 }
 ```
 
+**Validation Rules:**
+- **Name**: Required, 3-255 characters (trimmed)
+- **Description**: Optional, max 1000 characters (trimmed)
+- **System Prompt**: Required, 10-10000 characters (trimmed)
+- **Model Name**: Required (non-blank)
+- **Tool IDs**: Optional array of UUIDs
+
+**Implementation Details:**
+- Validation logic in `AgentWizardService.validateConfiguration()`
+- Returns `ValidationResult` with `valid` boolean and `errors` array
+- Used by both `/validate` endpoint and during deployment
+- Prevents invalid agents from being created
+
 #### POST /api/wizard/preview
 Preview agent with test prompt.
 
@@ -781,13 +794,19 @@ Key configuration in `application.properties`:
     - DELETE /api/wizard/session/{sessionId} - Delete session
     - All endpoints secured with JWT authentication
     - Session ownership verification for security
-  - ⏳ Task 5.4: Wizard validation logic (PENDING)
+  - ✅ Task 5.4: Wizard validation logic
+    - Agent name validation (required, 3-255 characters)
+    - Description validation (optional, max 1000 characters)
+    - System prompt validation (required, 10-10000 characters)
+    - Model name validation (required)
+    - Configuration completeness checking
+    - Integrated with validateConfiguration() endpoint
   - ⏳ Task 5.5: Wizard service tests (PENDING - optional test task)
 
 The following features are planned and documented in `.kiro/specs/ai-agent-platform/`:
 - ✅ Authentication and authorization (Task 3) - Complete
 - ✅ Dashboard layout and navigation (Task 4) - Complete
-- 🔄 Agent wizard service and UI (Task 5) - In Progress (2/5 subtasks complete)
+- 🔄 Agent wizard service and UI (Task 5) - In Progress (4/5 subtasks complete)
 - ⏳ LangChain4j AI services integration (Task 6)
 - ⏳ Agent runtime service (Task 7)
 - ⏳ Tool registry and execution (Task 8)
@@ -856,13 +875,18 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
   - `getRecentActivity()`: Returns recent platform activity with timestamps
   - Currently returns mock data; will be implemented with database queries in future tasks
 - **AgentWizardService**: Agent creation wizard management
-  - `createSession()`: Initialize new wizard session with Redis storage
-  - `getSession()`: Retrieve wizard session state
+  - `createSession()`: Initialize new wizard session with Redis storage (2-hour expiration)
+  - `getSession()`: Retrieve wizard session state from Redis
   - `saveStep()`: Save wizard step data to session
-  - `validateConfiguration()`: Validate agent configuration
+  - `validateConfiguration()`: Comprehensive validation of agent configuration
+    - Name validation: Required, 3-255 characters
+    - Description validation: Optional, max 1000 characters
+    - System prompt validation: Required, 10-10000 characters
+    - Model name validation: Required, non-blank
+    - Returns `ValidationResult` with errors array
   - `previewAgent()`: Test agent with sample prompt (mock implementation)
-  - `deployAgent()`: Deploy agent to production database
-  - `deleteSession()`: Clean up wizard session
+  - `deployAgent()`: Deploy agent to production database with validation
+  - `deleteSession()`: Clean up wizard session from Redis
 
 ### Dashboard Architecture
 

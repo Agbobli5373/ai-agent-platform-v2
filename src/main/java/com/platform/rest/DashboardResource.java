@@ -19,6 +19,10 @@ public class DashboardResource {
     Template dashboardHome;
 
     @Inject
+    @io.quarkus.qute.Location("wizard.html")
+    Template wizardTemplate;
+
+    @Inject
     DashboardService dashboardService;
 
     @GET
@@ -49,6 +53,21 @@ public class DashboardResource {
     @RolesAllowed({ "USER", "ADMIN" })
     public java.util.List<ActivityItem> getRecentActivity() {
         return dashboardService.getRecentActivity();
+    }
+
+    @GET
+    @Path("/wizard")
+    @Produces(MediaType.TEXT_HTML)
+    @jakarta.annotation.security.PermitAll
+    public TemplateInstance wizard() {
+        // Return wizard template
+        // User data will be loaded via JavaScript using the JWT token
+        return wizardTemplate
+                .data("userInitials", "U")
+                .data("userName", "User")
+                .data("userEmail", "user@example.com")
+                .data("userRole", "USER")
+                .data("currentOrgName", "My Organization");
     }
 
     public static class DashboardStats {
