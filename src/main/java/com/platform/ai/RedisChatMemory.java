@@ -43,7 +43,7 @@ public class RedisChatMemory {
     public List<String> getMessages(Long conversationId) {
         try {
             String key = buildKey(conversationId);
-            String conversationData = getValueCommands().get(key);
+            String conversationData = valueCommands.get(key);
             if (conversationData == null || conversationData.isEmpty()) {
                 return new ArrayList<>();
             }
@@ -62,7 +62,7 @@ public class RedisChatMemory {
     public void clearMemory(Long conversationId) {
         try {
             String key = buildKey(conversationId);
-            getValueCommands().getdel(key);
+            valueCommands.getdel(key);
             LOG.debugf("Cleared memory for conversation %d", conversationId);
         } catch (Exception e) {
             LOG.errorf(e, "Failed to clear memory for conversation %d", conversationId);
@@ -72,9 +72,9 @@ public class RedisChatMemory {
     public void updateTTL(Long conversationId, Duration ttl) {
         try {
             String key = buildKey(conversationId);
-            String existingData = getValueCommands().get(key);
+            String existingData = valueCommands.get(key);
             if (existingData != null) {
-                getValueCommands().setex(key, ttl.getSeconds(), existingData);
+                valueCommands.setex(key, ttl.getSeconds(), existingData);
                 LOG.infof("Updated TTL for conversation %d", conversationId);
             }
         } catch (Exception e) {
@@ -85,7 +85,7 @@ public class RedisChatMemory {
     public boolean hasMemory(Long conversationId) {
         try {
             String key = buildKey(conversationId);
-            return getValueCommands().get(key) != null;
+            return valueCommands.get(key) != null;
         } catch (Exception e) {
             LOG.errorf(e, "Failed to check memory existence for conversation %d", conversationId);
             return false;
@@ -94,12 +94,5 @@ public class RedisChatMemory {
 
     private String buildKey(Long conversationId) {
         return MEMORY_KEY_PREFIX + conversationId;
-    }
-
-    private ValueCommands<String, String> getValueCommands() {
-        if (valueCommands == null) {
-            valueCommands = redisDataSource.value(String.class, String.class);
-        }
-        return valueCommands;
     }
 }
