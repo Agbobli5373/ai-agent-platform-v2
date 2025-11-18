@@ -36,6 +36,7 @@ public class AuthenticationService {
     private ValueCommands<String, String> sessionCommands;
 
     @jakarta.annotation.PostConstruct
+    @SuppressWarnings("unused") // Called by CDI container
     void init() {
         sessionCommands = redisDataSource.value(String.class);
     }

@@ -16,7 +16,6 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
-import java.time.Duration;
 import java.util.Map;
 import java.util.UUID;
 
@@ -40,6 +39,7 @@ public class AgentWizardService {
     private ValueCommands<String, String> sessionCommands;
 
     @jakarta.annotation.PostConstruct
+    @SuppressWarnings("unused") // Called by CDI container
     void init() {
         sessionCommands = redisDataSource.value(String.class);
     }
