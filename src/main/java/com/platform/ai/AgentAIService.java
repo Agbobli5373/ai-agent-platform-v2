@@ -11,7 +11,7 @@ import jakarta.enterprise.context.ApplicationScoped;
  * AI service interface for agent interactions using LangChain4j.
  * Provides both synchronous and streaming chat capabilities.
  */
-@RegisterAiService
+@RegisterAiService(modelName = "mistral")
 @ApplicationScoped
 public interface AgentAIService {
 

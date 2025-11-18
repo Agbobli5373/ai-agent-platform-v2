@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Tool - AI Agent Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+</head>
+<body class="bg-gray-50">
+<div class="min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div class="flex items-center">
+                <a href="/tools" class="text-gray-600 hover:text-gray-900 mr-4">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                    </svg>
+                </a>
+                <h1 class="text-2xl font-bold text-gray-900">Create Tool</h1>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="bg-white shadow rounded-lg p-6" x-data="toolForm()">
+            <form @submit.prevent="submitForm">
+                <!-- Tool Name -->
+                <div class="mb-6">
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Tool Name *</label>
+                    <input type="text" id="name" x-model="formData.name" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="e.g., Weather API">
+                </div>
+
+                <!-- Description -->
+                <div class="mb-6">
+                    <label for="description" class="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                    <textarea id="description" x-model="formData.description" rows="3"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Describe what this tool does"></textarea>
+                </div>
+
+                <!-- Tool Type -->
+                <div class="mb-6">
+                    <label for="type" class="block text-sm font-medium text-gray-700 mb-2">Tool Type *</label>
+                    <select id="type" x-model="formData.type" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="">Select type</option>
+                        <option value="REST_API">REST API</option>
+                        <option value="FUNCTION">Function</option>
+                        <option value="DATABASE">Database</option>
+                    </select>
+                </div>
+
+                <!-- Endpoint URL -->
+                <div class="mb-6">
+                    <label for="endpoint" class="block text-sm font-medium text-gray-700 mb-2">Endpoint URL *</label>
+                    <input type="url" id="endpoint" x-model="formData.endpoint" required
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                           placeholder="https://api.example.com/endpoint">
+                </div>
+
+                <!-- Authentication -->
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Authentication</label>
+                    <select x-model="formData.authConfig.type"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-3">
+                        <option value="NONE">None</option>
+                        <option value="API_KEY">API Key</option>
+                        <option value="BASIC_AUTH">Basic Auth</option>
+                        <option value="OAUTH2">OAuth2</option>
+                    </select>
+
+                    <!-- API Key -->
+                    <div x-show="formData.authConfig.type === 'API_KEY'" class="mt-3">
+                        <label for="apiKey" class="block text-sm font-medium text-gray-700 mb-2">API Key</label>
+                        <input type="password" id="apiKey" x-model="formData.authConfig.apiKey"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                               placeholder="Enter API key">
+                    </div>
+
+                    <!-- Basic Auth -->
+                    <div x-show="formData.authConfig.type === 'BASIC_AUTH'" class="mt-3 space-y-3">
+                        <div>
+                            <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                            <input type="text" id="username" x-model="formData.authConfig.username"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                            <input type="password" id="password" x-model="formData.authConfig.password"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                    </div>
+
+                    <!-- OAuth2 -->
+                    <div x-show="formData.authConfig.type === 'OAUTH2'" class="mt-3 space-y-3">
+                        <div>
+                            <label for="oauthToken" class="block text-sm font-medium text-gray-700 mb-2">Access Token</label>
+                            <input type="password" id="oauthToken" x-model="formData.authConfig.apiKey"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                   placeholder="Enter OAuth2 access token">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div x-show="error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <p class="text-sm text-red-800" x-text="error"></p>
+                </div>
+
+                <!-- Success Message -->
+                <div x-show="success" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <p class="text-sm text-green-800">Tool created successfully!</p>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end space-x-3">
+                    <a href="/tools" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50">
+                        Cancel
+                    </a>
+                    <button type="submit" :disabled="submitting"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                        <span x-show="!submitting">Create Tool</span>
+                        <span x-show="submitting">Creating...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<script>
+    function toolForm() {
+        return {
+            formData: {
+                name: '',
+                description: '',
+                type: '',
+                endpoint: '',
+                authConfig: {
+                    type: 'NONE',
+                    apiKey: '',
+                    username: '',
+                    password: ''
+                }
+            },
+            submitting: false,
+            error: null,
+            success: false,
+
+            async submitForm() {
+                this.submitting = true;
+                this.error = null;
+                this.success = false;
+
+                try {
+                    // Get JWT token from localStorage
+                    const token = localStorage.getItem('accessToken');
+                    if (!token) {
+                        this.error = 'Authentication required. Please log in again.';
+                        setTimeout(() => {
+                            window.location.href = '/auth/login';
+                        }, 2000);
+                        return;
+                    }
+
+                    const response = await fetch('/api/tools', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token
+                        },
+                        body: JSON.stringify(this.formData)
+                    });
+
+                    if (response.ok) {
+                        this.success = true;
+                        setTimeout(() => {
+                            window.location.href = '/tools';
+                        }, 1000);
+                    } else if (response.status === 401) {
+                        this.error = 'Session expired. Please log in again.';
+                        setTimeout(() => {
+                            window.location.href = '/auth/login';
+                        }, 2000);
+                    } else {
+                        const data = await response.json();
+                        this.error = data.message || 'Failed to create tool';
+                    }
+                } catch (err) {
+                    this.error = 'Network error: ' + err.message;
+                } finally {
+                    this.submitting = false;
+                }
+            }
+        }
+    }
+</script>
+</body>
+</html>

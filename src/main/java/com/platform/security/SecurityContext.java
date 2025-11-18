@@ -3,6 +3,9 @@ package com.platform.security;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.RequestScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.jwt.JsonWebToken;
+
+import java.util.UUID;
 
 @RequestScoped
 public class SecurityContext {
@@ -10,20 +13,23 @@ public class SecurityContext {
     @Inject
     SecurityIdentity securityIdentity;
 
-    public Long getCurrentUserId() {
+    @Inject
+    JsonWebToken jwt;
+
+    public UUID getCurrentUserId() {
         if (securityIdentity.isAnonymous()) {
             return null;
         }
-        String userId = securityIdentity.getAttribute("userId");
-        return userId != null ? Long.parseLong(userId) : null;
+        String userId = jwt.getSubject();
+        return userId != null ? UUID.fromString(userId) : null;
     }
 
-    public Long getCurrentOrganizationId() {
+    public UUID getCurrentOrganizationId() {
         if (securityIdentity.isAnonymous()) {
             return null;
         }
-        String orgId = securityIdentity.getAttribute("organizationId");
-        return orgId != null ? Long.parseLong(orgId) : null;
+        String orgId = jwt.getClaim("organizationId");
+        return orgId != null ? UUID.fromString(orgId) : null;
     }
 
     public String getCurrentUserEmail() {

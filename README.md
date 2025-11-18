@@ -704,6 +704,270 @@ class ToolChainResult {
 }
 ```
 
+### Tool Registry API
+
+The platform provides REST endpoints for managing external API integrations (tools) that agents can use:
+
+#### POST /api/tools
+Register a new tool.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Request Body:**
+```json
+{
+  "name": "Weather API",
+  "description": "Get weather information for any city",
+  "type": "REST_API",
+  "endpoint": "https://api.openweathermap.org/data/2.5/weather",
+  "authConfig": {
+    "type": "API_KEY",
+    "apiKey": "your-api-key-here"
+  },
+  "parameters": {
+    "city": {
+      "name": "city",
+      "type": "string",
+      "description": "City name",
+      "required": true
+    }
+  }
+}
+```
+
+**Response:** 201 Created with tool details
+
+**Authentication Types:**
+- `API_KEY` - API key authentication (Bearer token or X-API-Key header)
+- `BASIC_AUTH` - HTTP Basic authentication (username/password)
+- `OAUTH2` - OAuth2 Bearer token
+- `NONE` - No authentication required
+
+#### GET /api/tools
+List all tools for the current organization.
+
+**Authentication:** Required (USER, ADMIN, or VIEWER role)
+
+**Response:**
+```json
+[
+  {
+    "id": "uuid",
+    "name": "Weather API",
+    "description": "Get weather information",
+    "type": "REST_API",
+    "endpoint": "https://api.openweathermap.org/data/2.5/weather",
+    "createdAt": "2024-11-18T10:30:00"
+  }
+]
+```
+
+#### GET /api/tools/{toolId}
+Get a specific tool by ID.
+
+**Authentication:** Required (USER, ADMIN, or VIEWER role)
+
+**Response:** Tool details (same format as POST response)
+
+#### PUT /api/tools/{toolId}
+Update an existing tool.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Request Body:** Same format as POST /api/tools
+
+**Response:** 200 OK with updated tool details
+
+#### DELETE /api/tools/{toolId}
+Delete a tool.
+
+**Authentication:** Required (ADMIN role only)
+
+**Response:** 200 OK with success message
+
+#### POST /api/tools/{toolId}/validate
+Validate tool connection and authentication.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Response:**
+```json
+{
+  "valid": true,
+  "message": "Connection successful",
+  "responseTimeMs": 245,
+  "statusCode": 200
+}
+```
+
+Or if validation fails:
+```json
+{
+  "valid": false,
+  "message": "Connection error: ...",
+  "errorDetails": "..."
+}
+```
+
+#### POST /api/tools/{toolId}/execute
+Execute a tool with given parameters.
+
+**Authentication:** Required (USER or ADMIN role)
+
+**Request Body:**
+```json
+{
+  "city": "London",
+  "units": "metric"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "result": {
+    "temperature": 15,
+    "conditions": "Rainy"
+  },
+  "executionTimeMs": 1234,
+  "metadata": {
+    "statusCode": 200,
+    "toolId": "uuid",
+    "toolName": "Weather API"
+  }
+}
+```
+
+**Features:**
+- Timeout protection (10 seconds)
+- Automatic retry with exponential backoff (3 attempts)
+- Circuit breaker pattern (opens after 50% failure rate)
+- Support for GET and POST HTTP methods
+- Secure credential storage
+
+#### GET /api/tools/type/{type}
+Get tools filtered by type.
+
+**Authentication:** Required (USER, ADMIN, or VIEWER role)
+
+**Tool Types:**
+- `REST_API` - External REST API integration
+- `FUNCTION` - Custom function execution
+- `DATABASE` - Database query tool
+
+#### GET /api/tools/search?q={query}
+Search tools by name or description.
+
+**Authentication:** Required (USER, ADMIN, or VIEWER role)
+
+**Response:** Array of matching tools
+
+### Tool Management UI
+
+The platform provides web pages for managing tools:
+
+#### GET /tools
+Tool list page with all organization tools.
+
+**Authentication:** Public access (data loaded client-side with JWT)
+
+**Features:**
+- List all tools with name, description, type, and endpoint
+- Test button to validate tool connection
+- Edit and delete actions
+- Create new tool button
+- Responsive design with Tailwind CSS
+
+#### GET /tools/create
+Tool creation form page.
+
+**Authentication:** Public access (form submission requires JWT)
+
+**Features:**
+- Form fields for tool configuration
+- Authentication type selector (API_KEY, BASIC_AUTH, OAUTH2, NONE)
+- Parameter definition interface
+- Real-time validation
+- Submit creates tool via POST /api/tools
+
+#### GET /tools/{toolId}/edit
+Tool editing form page.
+
+**Authentication:** Public access (data loaded and saved with JWT)
+
+**Features:**
+- Pre-populated form with existing tool data
+- Same fields as creation form
+- Update button saves via PUT /api/tools/{toolId}
+
+**Technical Implementation:**
+- Server-side rendering with Qute templates
+- Qute template variable `{toolId}` passed directly to Alpine.js component as parameter
+- Client-side data loading via JavaScript fetch with JWT authentication
+- Alpine.js for form interactivity
+- Automatic redirect to login if token missing/expired
+
+**Implementation Pattern:**
+```html
+<!-- Pass Qute variable to Alpine.js component -->
+<div x-data="toolEditForm('{toolId}')" x-init="init()">
+```
+
+```javascript
+// Accept toolId as parameter and store in component state
+function toolEditForm(toolId) {
+    return {
+        toolId: toolId,  // Store for reuse in API calls
+        async init() {
+            const response = await fetch('/api/tools/' + this.toolId, {
+                headers: { 'Authorization': 'Bearer ' + token }
+            });
+            // Load tool data...
+        }
+    }
+}
+```
+
+**Key Pattern:** Pass server-side template variables directly to Alpine.js components rather than parsing URLs client-side. This ensures data consistency and simplifies the code.
+
+### Testing Tool Registry API
+
+```bash
+# Register a new tool
+curl -X POST http://localhost:8080/api/tools \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Weather API",
+    "description": "Get weather information",
+    "type": "REST_API",
+    "endpoint": "https://api.openweathermap.org/data/2.5/weather",
+    "authConfig": {
+      "type": "API_KEY",
+      "apiKey": "your-api-key"
+    }
+  }'
+
+# List all tools
+curl -X GET http://localhost:8080/api/tools \
+  -H "Authorization: Bearer TOKEN"
+
+# Validate tool connection
+curl -X POST http://localhost:8080/api/tools/TOOL_ID/validate \
+  -H "Authorization: Bearer TOKEN"
+
+# Execute tool
+curl -X POST http://localhost:8080/api/tools/TOOL_ID/execute \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"city": "London", "units": "metric"}'
+
+# Delete tool
+curl -X DELETE http://localhost:8080/api/tools/TOOL_ID \
+  -H "Authorization: Bearer TOKEN"
+```
+
 ### Dashboard Features
 
 The dashboard provides a modern, responsive interface with the following features:
@@ -803,6 +1067,10 @@ Key configuration in `application.properties`:
 - **Key Files**: privateKey.pem (signing), publicKey.pem (verification)
 - **Session Storage**: Redis with 24-hour expiration
 - **Password Hashing**: BCrypt with strength 12
+- **JWT Claims Access**: Uses `JsonWebToken` interface for reading claims
+  - User ID: `jwt.getSubject()` (stored in "sub" claim)
+  - Organization ID: `jwt.getClaim("organizationId")` (custom claim)
+  - Implemented in `AuthorizationService` and `SecurityContext`
 
 ### HTTP Server
 - **Port**: 8080
@@ -822,6 +1090,58 @@ Key configuration in `application.properties`:
 - **Level**: INFO (DEBUG for com.platform package)
 - **SQL Logging**: Enabled in dev mode
 - **Console Colors**: Enabled in dev mode
+
+## Troubleshooting
+
+### JWT Authentication Issues
+
+**Problem:** "User ID not found in token" or "Insufficient permissions to access this resource"
+
+**Solution:** The application uses the `JsonWebToken` interface to read JWT claims. Ensure your code uses:
+- `jwt.getSubject()` for user ID (not `securityIdentity.getAttribute("sub")`)
+- `jwt.getClaim("organizationId")` for organization ID (not `securityIdentity.getAttribute("organizationId")`)
+
+**Example:**
+```java
+@Inject
+JsonWebToken jwt;
+
+public UUID getCurrentUserId() {
+    String userId = jwt.getSubject();  // ✅ Correct
+    return UUID.fromString(userId);
+}
+
+public UUID getCurrentOrganizationId() {
+    String orgId = jwt.getClaim("organizationId");  // ✅ Correct
+    return UUID.fromString(orgId);
+}
+```
+
+**Reference:** See `AuthorizationService` and `SecurityContext` for proper implementation.
+
+### Database Connection Issues
+
+**Problem:** Cannot connect to PostgreSQL or Redis
+
+**Solution:** Ensure Docker containers are running:
+```bash
+docker-compose ps
+docker-compose logs postgres
+docker-compose logs redis
+```
+
+Check ports are not in use:
+- PostgreSQL: 5433
+- Redis: 6380
+
+### Quarkus Dev Mode Not Hot-Reloading
+
+**Problem:** Changes not reflected after saving files
+
+**Solution:** 
+1. Check console for compilation errors
+2. Restart dev mode: `./mvnw quarkus:dev`
+3. Clear target directory: `./mvnw clean`
 
 ## Implementation Status
 
@@ -935,6 +1255,46 @@ Key configuration in `application.properties`:
     - Integrated with validateConfiguration() endpoint
   - ⏳ Task 5.5: Wizard service tests (PENDING - optional test task)
 
+- ✅ **Task 6**: Tool registry and execution service (COMPLETE)
+  - ✅ Task 6.1: Tool registry service
+    - ToolRegistryService with CRUD operations
+    - Tool validation and connection testing
+    - Organization-level tool isolation
+    - Support for multiple authentication types (API_KEY, BASIC_AUTH, OAUTH2, NONE)
+  - ✅ Task 6.2: Tool executor with fault tolerance
+    - ToolExecutor with HTTP client integration
+    - Timeout protection (10 seconds)
+    - Automatic retry with exponential backoff (3 attempts, 1s delay, 500ms jitter)
+    - Circuit breaker pattern (opens after 50% failure rate over 10 requests)
+    - Support for GET and POST HTTP methods
+    - Secure authentication header injection
+  - ✅ Task 6.3: Tool REST endpoints
+    - POST /api/tools - Register new tool
+    - GET /api/tools - List organization tools
+    - GET /api/tools/{toolId} - Get tool details
+    - PUT /api/tools/{toolId} - Update tool
+    - DELETE /api/tools/{toolId} - Delete tool (ADMIN only)
+    - POST /api/tools/{toolId}/validate - Test connection
+    - POST /api/tools/{toolId}/execute - Execute tool
+    - GET /api/tools/type/{type} - Filter by type
+    - GET /api/tools/search?q={query} - Search tools
+    - All endpoints secured with JWT and role-based access control
+  - ✅ Task 6.4: Tool management UI
+    - GET /tools - Tool list page with test/edit/delete actions
+    - GET /tools/create - Tool creation form
+    - GET /tools/{toolId}/edit - Tool editing form
+    - Server-side rendering with Qute templates
+    - Client-side data loading with JWT authentication
+    - Alpine.js for interactive forms
+    - Responsive design with Tailwind CSS
+  - ✅ Task 6.5: LangChain4j tool integration
+    - LangChainToolProvider with @Tool annotations
+    - executeTool() method for agent tool execution
+    - listAvailableTools() for tool discovery
+    - getToolInfo() for tool metadata
+    - Integration with AgentAIService
+  - ⏳ Task 6.6: Tool execution tests (PENDING - optional test task)
+
 - 🔄 **Task 7**: Agent runtime service (IN PROGRESS)
   - ✅ Task 7.1: Agent runtime service core
     - AgentRuntimeService with message processing
@@ -963,7 +1323,7 @@ The following features are planned and documented in `.kiro/specs/ai-agent-platf
 - 🔄 Agent wizard service and UI (Task 5) - In Progress (4/5 subtasks complete)
 - ⏳ LangChain4j AI services integration (Task 6)
 - 🔄 Agent runtime service (Task 7) - In Progress (3/4 subtasks complete)
-- ⏳ Tool registry and execution (Task 8)
+- ✅ Tool registry and execution (Task 8) - Complete (5/5 subtasks complete, tests pending)
 - ⏳ Vector store and document indexing (Task 9)
 - ⏳ Monitoring and metrics (Task 10)
 - ⏳ Usage tracking and cost management (Task 11)

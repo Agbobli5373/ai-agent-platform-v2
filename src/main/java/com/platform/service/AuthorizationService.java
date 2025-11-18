@@ -7,6 +7,7 @@ import com.platform.security.Role;
 import io.quarkus.security.identity.SecurityIdentity;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.jwt.JsonWebToken;
 
 import java.util.UUID;
 
@@ -18,6 +19,9 @@ public class AuthorizationService {
 
     @Inject
     SecurityIdentity securityIdentity;
+
+    @Inject
+    JsonWebToken jwt;
 
     /**
      * Check if the current user has a specific permission
@@ -52,7 +56,7 @@ public class AuthorizationService {
             throw new AuthorizationException("User not authenticated");
         }
 
-        String userId = securityIdentity.getAttribute("sub");
+        String userId = jwt.getSubject();
         if (userId == null || userId.isBlank()) {
             throw new AuthorizationException("User ID not found in token");
         }
@@ -72,7 +76,7 @@ public class AuthorizationService {
             throw new AuthorizationException("User not authenticated");
         }
 
-        String orgId = securityIdentity.getAttribute("organizationId");
+        String orgId = jwt.getClaim("organizationId");
         if (orgId == null || orgId.isBlank()) {
             throw new AuthorizationException("User has no organization");
         }
