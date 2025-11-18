@@ -250,8 +250,8 @@ function dashboardHome() {
 
                 if (response.ok) {
                     const userInfo = await response.json();
-                    // Update user info in the parent layout if needed
-                    console.log('User info loaded:', userInfo);
+                    // Dispatch event to update user info in parent layout
+                    window.dispatchEvent(new CustomEvent('userInfoLoaded', { detail: userInfo }));
                 } else if (response.status === 401) {
                     // Token expired, redirect to login
                     localStorage.removeItem('accessToken');

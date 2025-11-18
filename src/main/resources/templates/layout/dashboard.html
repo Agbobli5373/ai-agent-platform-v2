@@ -266,11 +266,11 @@
                                 class="flex items-center space-x-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
                             >
                                 <div class="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center">
-                                    <span class="text-white text-sm font-medium">{#insert userInitials}U{/insert}</span>
+                                    <span class="text-white text-sm font-medium" x-text="userInfo.initials"></span>
                                 </div>
                                 <div class="hidden md:block text-left">
-                                    <p class="text-sm font-medium text-gray-900">{#insert userName}User{/insert}</p>
-                                    <p class="text-xs text-gray-500">{#insert userRole}Admin{/insert}</p>
+                                    <p class="text-sm font-medium text-gray-900" x-text="userInfo.name"></p>
+                                    <p class="text-xs text-gray-500" x-text="userInfo.role"></p>
                                 </div>
                                 <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
@@ -286,8 +286,8 @@
                             >
                                 {#insert profileMenu}
                                 <div class="px-4 py-2 border-b border-gray-200">
-                                    <p class="text-sm font-medium text-gray-900">{#insert profileUserName}User{/insert}</p>
-                                    <p class="text-xs text-gray-500">{#insert profileUserEmail}user@example.com{/insert}</p>
+                                    <p class="text-sm font-medium text-gray-900" x-text="userInfo.name"></p>
+                                    <p class="text-xs text-gray-500" x-text="userInfo.email"></p>
                                 </div>
                                 
                                 <!-- Organization Switcher -->
@@ -297,7 +297,7 @@
                                         @click="orgSwitcherOpen = !orgSwitcherOpen"
                                         class="w-full flex items-center justify-between p-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                                     >
-                                        <span class="truncate">{#insert currentOrgName}My Organization{/insert}</span>
+                                        <span class="truncate" x-text="userInfo.organizationName"></span>
                                         <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4"></path>
                                         </svg>
@@ -385,8 +385,15 @@
                 mobileSidebarOpen: false,
                 darkMode: false,
                 currentPath: window.location.pathname,
+                userInfo: {
+                    initials: 'U',
+                    name: 'User',
+                    email: 'user@example.com',
+                    role: 'USER',
+                    organizationName: 'My Organization'
+                },
 
-                init() {
+                async init() {
                     // Load dark mode preference from localStorage
                     this.darkMode = localStorage.getItem('darkMode') === 'true';
                     if (this.darkMode) {
@@ -403,6 +410,66 @@
                     this.$watch('sidebarOpen', value => {
                         localStorage.setItem('sidebarOpen', value);
                     });
+
+                    // Load user info
+                    await this.loadUserInfo();
+
+                    // Listen for user info updates from child pages
+                    window.addEventListener('userInfoLoaded', (event) => {
+                        this.updateUserDisplay(event.detail);
+                    });
+                },
+
+                async loadUserInfo() {
+                    try {
+                        const token = localStorage.getItem('accessToken');
+                        if (!token) {
+                            return;
+                        }
+
+                        const response = await fetch('/api/auth/me', {
+                            headers: {
+                                'Authorization': 'Bearer ' + token
+                            }
+                        });
+
+                        if (response.ok) {
+                            const userInfo = await response.json();
+                            this.updateUserDisplay(userInfo);
+                        } else if (response.status === 401) {
+                            // Token expired, redirect to login
+                            localStorage.removeItem('accessToken');
+                            localStorage.removeItem('refreshToken');
+                            window.location.href = '/auth/login';
+                        }
+                    } catch (err) {
+                        console.error('Failed to load user info:', err);
+                    }
+                },
+
+                updateUserDisplay(userInfo) {
+                    this.userInfo.initials = this.getUserInitials(userInfo.email);
+                    this.userInfo.name = this.getUserName(userInfo.email);
+                    this.userInfo.email = userInfo.email;
+                    this.userInfo.role = userInfo.role;
+                    this.userInfo.organizationName = userInfo.organizationName;
+
+                    console.log('User display updated:', this.userInfo);
+                },
+
+                getUserInitials(email) {
+                    if (!email) return 'U';
+                    const name = email.split('@')[0];
+                    if (name.length >= 2) {
+                        return name.substring(0, 2).toUpperCase();
+                    }
+                    return name.substring(0, 1).toUpperCase();
+                },
+
+                getUserName(email) {
+                    if (!email) return 'User';
+                    const name = email.split('@')[0];
+                    return name.charAt(0).toUpperCase() + name.slice(1);
                 },
 
                 isActivePage(path) {

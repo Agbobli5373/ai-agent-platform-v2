@@ -2,7 +2,6 @@ package com.platform.rest;
 
 import io.quarkus.qute.Template;
 import io.quarkus.qute.TemplateInstance;
-import jakarta.annotation.security.PermitAll;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
@@ -16,11 +15,12 @@ import jakarta.ws.rs.core.MediaType;
 public class WizardPageResource {
 
     @Inject
+    @io.quarkus.qute.Location("wizard.html")
     Template wizard;
 
     @GET
     @Produces(MediaType.TEXT_HTML)
-    @PermitAll
+    @jakarta.annotation.security.PermitAll
     public TemplateInstance getWizard() {
         // Return wizard template without user data
         // User data will be loaded via JavaScript using the JWT token

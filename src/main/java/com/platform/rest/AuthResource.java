@@ -36,6 +36,9 @@ public class AuthResource {
     @Inject
     JsonWebToken jwt;
 
+    @Inject
+    com.platform.repository.UserRepository userRepository;
+
     /**
      * Login endpoint
      */
@@ -105,16 +108,35 @@ public class AuthResource {
     @Authenticated
     public Response getCurrentUser() {
         UUID userId = authorizationService.getCurrentUserId();
-        UUID orgId = authorizationService.getCurrentOrganizationId();
-        String role = authorizationService.getCurrentRole().name();
+        User user = userRepository.findByIdWithOrganization(userId)
+                .orElseThrow(() -> new jakarta.ws.rs.NotFoundException("User not found"));
 
-        AuthenticationResponse.UserInfo userInfo = new AuthenticationResponse.UserInfo(
-                userId,
-                jwt.getName(),
-                role,
-                orgId);
+        String organizationName = user.organization != null ? user.organization.name : "No Organization";
+        
+        UserInfoResponse userInfo = new UserInfoResponse(
+                user.id,
+                user.email,
+                user.role,
+                user.organization != null ? user.organization.id : null,
+                organizationName);
 
         return Response.ok(userInfo).build();
+    }
+
+    public static class UserInfoResponse {
+        public UUID id;
+        public String email;
+        public String role;
+        public UUID organizationId;
+        public String organizationName;
+
+        public UserInfoResponse(UUID id, String email, String role, UUID organizationId, String organizationName) {
+            this.id = id;
+            this.email = email;
+            this.role = role;
+            this.organizationId = organizationId;
+            this.organizationName = organizationName;
+        }
     }
 
     // Helper classes for responses
