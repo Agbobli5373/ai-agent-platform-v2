@@ -225,18 +225,27 @@
     - Test error handling for AI service failures
     - _Requirements: 1.3, 1.4, 7.2_
 
-- [ ] 7. Implement agent runtime service
+- [-] 7. Implement agent runtime service
+
+
+
+
   - [ ] 7.1 Create agent runtime service core
     - Write AgentRuntimeService with message processing
     - Implement conversation context management
     - Create agent configuration loader from database
     - Write response streaming with Multi<String>
+
+
     - _Requirements: 1.5, 7.2_
   
   - [ ] 7.2 Implement WebSocket endpoint for real-time chat
     - Write WebSocket endpoint with @WebSocket annotation
     - Implement onOpen handler for connection initialization
     - Create onMessage handler for user input processing
+
+
+
     - Write streaming response handler to client
     - Implement error handling and connection management
     - _Requirements: 1.5, 7.2, 9.3_
