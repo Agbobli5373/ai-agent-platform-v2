@@ -27,8 +27,8 @@ public class DocumentEmbedding extends PanacheEntityBase {
     @Column(nullable = false, columnDefinition = "TEXT")
     public String content;
 
-    @Column(columnDefinition = "vector(1536)")
-    @JdbcTypeCode(SqlTypes.VECTOR)
+    @Column(columnDefinition = "vector(1024)")
+    @org.hibernate.annotations.Type(VectorType.class)
     public float[] embedding;
 
     @JdbcTypeCode(SqlTypes.JSON)

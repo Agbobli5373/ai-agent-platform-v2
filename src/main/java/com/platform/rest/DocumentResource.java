@@ -48,6 +48,9 @@ public class DocumentResource {
                 securityContext.getCurrentOrganizationId(),
                 securityContext.getCurrentUserId());
 
+        // Trigger async processing after transaction commits
+        documentProcessingService.processDocumentAsync(document.id);
+
         return Response.ok(document).build();
     }
 

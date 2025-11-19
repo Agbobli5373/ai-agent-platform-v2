@@ -54,9 +54,8 @@ public class DocumentProcessingService {
             document.sizeBytes = (long) fileBytes.length;
 
             documentRepository.persist(document);
+            documentRepository.flush(); // Force immediate write to database
             LOG.infof("Document uploaded successfully: %s (ID: %s)", fileName, document.id);
-
-            processDocumentAsync(document.id);
 
             return document;
         } catch (Exception e) {
@@ -87,7 +86,12 @@ public class DocumentProcessingService {
     public void processDocumentAsync(UUID documentId) {
         CompletableFuture.runAsync(() -> {
             try {
+                // Small delay to ensure transaction is committed
+                Thread.sleep(100);
                 processDocument(documentId);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOG.errorf(e, "Async document processing interrupted for ID: %s", documentId);
             } catch (Exception e) {
                 LOG.errorf(e, "Async document processing failed for ID: %s", documentId);
             }
