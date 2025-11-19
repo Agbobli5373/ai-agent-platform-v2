@@ -11,11 +11,17 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletionStage;
 import java.util.stream.Collectors;
+
+import com.platform.service.dto.RAGConfiguration;
+import com.platform.service.dto.RAGContext;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 /**
  * Agent Runtime Service handles agent execution, message processing,
@@ -32,6 +38,95 @@ public class AgentRuntimeService {
 
     @Inject
     ToolExecutionOrchestrator toolOrchestrator;
+
+    @Inject
+    VectorStoreService vectorStoreService;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Retrieve RAG context for a user message.
+     *
+     * @param agent       The agent
+     * @param userMessage The user's message
+     * @return RAG context with retrieved passages
+     */
+    public RAGContext retrieveRAGContext(Agent agent, String userMessage) {
+        RAGContext ragContext = new RAGContext();
+        
+        try {
+            // Parse RAG configuration from agent configuration
+            RAGConfiguration ragConfig = parseRAGConfiguration(agent);
+            
+            if (!ragConfig.enabled) {
+                Log.debugf("RAG is disabled for agent %s", agent.id);
+                return ragContext;
+            }
+            
+            // Perform semantic search
+            List<VectorStoreService.SearchResult> searchResults = vectorStoreService.semanticSearch(
+                userMessage,
+                agent.organization.id,
+                ragConfig.maxPassages,
+                ragConfig.relevanceThreshold
+            );
+            
+            // Convert search results to RAG context
+            for (VectorStoreService.SearchResult result : searchResults) {
+                RAGContext.RetrievedPassage passage = new RAGContext.RetrievedPassage(
+                    result.documentId,
+                    result.documentName,
+                    result.chunkText,
+                    result.chunkIndex,
+                    result.relevanceScore
+                );
+                ragContext.addPassage(passage);
+            }
+            
+            Log.infof("Retrieved %d passages for agent %s with threshold %.2f",
+                    ragContext.totalPassages, agent.id, ragConfig.relevanceThreshold);
+            
+        } catch (Exception e) {
+            Log.errorf(e, "Error retrieving RAG context for agent %s", agent.id);
+            // Return empty context on error - don't fail the entire request
+        }
+        
+        return ragContext;
+    }
+
+    /**
+     * Parse RAG configuration from agent configuration JSON.
+     *
+     * @param agent The agent
+     * @return RAG configuration
+     */
+    private RAGConfiguration parseRAGConfiguration(Agent agent) {
+        if (agent.configuration == null || agent.configuration.isEmpty()) {
+            return new RAGConfiguration(); // Disabled by default
+        }
+        
+        try {
+            Map<String, Object> config = objectMapper.readValue(
+                agent.configuration,
+                new TypeReference<Map<String, Object>>() {}
+            );
+            
+            if (config.containsKey("rag")) {
+                Map<String, Object> ragMap = (Map<String, Object>) config.get("rag");
+                RAGConfiguration ragConfig = new RAGConfiguration();
+                ragConfig.enabled = (Boolean) ragMap.getOrDefault("enabled", false);
+                ragConfig.relevanceThreshold = ((Number) ragMap.getOrDefault("relevanceThreshold", 0.7)).doubleValue();
+                ragConfig.maxPassages = ((Number) ragMap.getOrDefault("maxPassages", 5)).intValue();
+                ragConfig.includeCitations = (Boolean) ragMap.getOrDefault("includeCitations", true);
+                ragConfig.validate();
+                return ragConfig;
+            }
+        } catch (Exception e) {
+            Log.warnf(e, "Failed to parse RAG configuration for agent %s, using defaults", agent.id);
+        }
+        
+        return new RAGConfiguration(); // Disabled by default
+    }
 
     /**
      * Process a message synchronously with conversation context.
@@ -74,12 +169,36 @@ public class AgentRuntimeService {
             // Build conversation context
             String conversationHistory = buildConversationContext(conversation.id);
 
-            // Get AI response
+            // Retrieve RAG context
+            RAGContext ragContext = retrieveRAGContext(agent, userMessage);
+
+            // Get AI response with appropriate context
             String aiResponse;
-            if (conversationHistory.isEmpty()) {
-                aiResponse = aiService.chat(agent.systemPrompt, userMessage);
+            if (ragContext.hasContext && !conversationHistory.isEmpty()) {
+                // Both RAG and conversation history
+                aiResponse = aiService.chatWithContextAndRAG(
+                    agent.systemPrompt,
+                    conversationHistory,
+                    ragContext.formatForPrompt(),
+                    userMessage
+                );
+            } else if (ragContext.hasContext) {
+                // Only RAG context
+                aiResponse = aiService.chatWithRAG(
+                    agent.systemPrompt,
+                    ragContext.formatForPrompt(),
+                    userMessage
+                );
+            } else if (!conversationHistory.isEmpty()) {
+                // Only conversation history
+                aiResponse = aiService.chatWithContext(
+                    agent.systemPrompt,
+                    conversationHistory,
+                    userMessage
+                );
             } else {
-                aiResponse = aiService.chatWithContext(agent.systemPrompt, conversationHistory, userMessage);
+                // No context
+                aiResponse = aiService.chat(agent.systemPrompt, userMessage);
             }
 
             // Save assistant message
@@ -96,11 +215,19 @@ public class AgentRuntimeService {
 
             Log.infof("Processed message for agent %s, conversation %s", agentId, conversation.id);
 
-            return new AgentResponse(
+            // Create response with citations
+            AgentResponse response = new AgentResponse(
                     conversation.id,
                     aiResponse,
                     assistantMsg.id,
                     LocalDateTime.now());
+            
+            // Add citations if RAG was used
+            if (ragContext.hasContext) {
+                response.citations = ragContext.getCitations();
+            }
+            
+            return response;
         }).subscribeAsCompletionStage();
     }
 
@@ -139,8 +266,20 @@ public class AgentRuntimeService {
                 // Save user message (in transaction)
                 saveUserMessage(conversation, userMessage);
 
-                // Stream AI response
-                Multi<String> stream = aiService.chatStream(agent.systemPrompt, userMessage);
+                // Retrieve RAG context
+                RAGContext ragContext = retrieveRAGContext(agent, userMessage);
+
+                // Stream AI response with RAG context if available
+                Multi<String> stream;
+                if (ragContext.hasContext) {
+                    stream = aiService.chatStreamWithRAG(
+                        agent.systemPrompt,
+                        ragContext.formatForPrompt(),
+                        userMessage
+                    );
+                } else {
+                    stream = aiService.chatStream(agent.systemPrompt, userMessage);
+                }
 
                 StringBuilder fullResponse = new StringBuilder();
 
@@ -285,12 +424,14 @@ public class AgentRuntimeService {
         public String content;
         public UUID messageId;
         public LocalDateTime timestamp;
+        public List<RAGContext.Citation> citations;
 
         public AgentResponse(UUID conversationId, String content, UUID messageId, LocalDateTime timestamp) {
             this.conversationId = conversationId;
             this.content = content;
             this.messageId = messageId;
             this.timestamp = timestamp;
+            this.citations = new ArrayList<>();
         }
     }
 }

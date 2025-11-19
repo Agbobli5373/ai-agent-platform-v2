@@ -90,27 +90,53 @@ public class VectorStoreService {
     }
 
     public List<SearchResult> semanticSearch(String query, UUID organizationId, int limit) {
-        LOG.infof("Performing semantic search for query: %s", query);
+        return semanticSearch(query, organizationId, limit, 0.0);
+    }
+
+    /**
+     * Perform semantic search with relevance threshold filtering.
+     *
+     * @param query            The search query
+     * @param organizationId   The organization ID for filtering
+     * @param limit            Maximum number of results
+     * @param relevanceThreshold Minimum relevance score (0.0 to 1.0)
+     * @return List of search results above the threshold
+     */
+    public List<SearchResult> semanticSearch(String query, UUID organizationId, int limit, double relevanceThreshold) {
+        LOG.infof("Performing semantic search for query: %s with threshold: %.2f", query, relevanceThreshold);
         
         float[] queryEmbedding = embeddingService.embed(query);
         
+        // Retrieve more results than needed to account for filtering
+        int retrievalLimit = Math.min(limit * 3, 50);
         List<DocumentEmbedding> results = embeddingRepository.findSimilar(
             queryEmbedding, 
             organizationId, 
-            limit
+            retrievalLimit
         );
 
         List<SearchResult> searchResults = new ArrayList<>();
         for (DocumentEmbedding embedding : results) {
-            SearchResult result = new SearchResult();
-            result.documentId = embedding.document.id;
-            result.documentName = embedding.document.filename;
-            result.chunkText = embedding.content;
-            result.chunkIndex = embedding.chunkIndex;
-            result.relevanceScore = calculateRelevance(queryEmbedding, embedding.embedding);
-            searchResults.add(result);
+            double relevanceScore = calculateRelevance(queryEmbedding, embedding.embedding);
+            
+            // Apply relevance threshold filtering
+            if (relevanceScore >= relevanceThreshold) {
+                SearchResult result = new SearchResult();
+                result.documentId = embedding.document.id;
+                result.documentName = embedding.document.filename;
+                result.chunkText = embedding.content;
+                result.chunkIndex = embedding.chunkIndex;
+                result.relevanceScore = relevanceScore;
+                searchResults.add(result);
+                
+                // Stop once we have enough results
+                if (searchResults.size() >= limit) {
+                    break;
+                }
+            }
         }
 
+        LOG.infof("Found %d results above threshold %.2f", searchResults.size(), relevanceThreshold);
         return searchResults;
     }
 
