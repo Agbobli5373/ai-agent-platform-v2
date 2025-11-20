@@ -1,0 +1,207 @@
+{#include layout/dashboard.html}
+
+{#title}Agent Details - AI Agent Platform{/title}
+
+{#userInitials}{userInitials}{/userInitials}
+{#userName}{userName}{/userName}
+{#userRole}{userRole}{/userRole}
+{#profileUserName}{userName}{/profileUserName}
+{#profileUserEmail}{userEmail}{/profileUserEmail}
+{#currentOrgName}{currentOrgName}{/currentOrgName}
+
+{#breadcrumbs}
+<a href="/dashboard" class="text-gray-500 hover:text-gray-700">Dashboard</a>
+<span class="text-gray-400 mx-2">/</span>
+<a href="/agents" class="text-gray-500 hover:text-gray-700">Agents</a>
+<span class="text-gray-400 mx-2">/</span>
+<span class="text-gray-900 font-medium">Details</span>
+{/breadcrumbs}
+
+{#content}
+<div x-data="agentDetail()">
+    <!-- Loading State -->
+    <div x-show="loading" class="flex justify-center py-12">
+        <svg class="animate-spin h-8 w-8 text-indigo-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+
+    <!-- Error Message -->
+    <div x-show="errorMessage" class="mb-4 p-4 bg-red-50 rounded-lg">
+        <div class="flex">
+            <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="ml-3 text-sm text-red-700" x-text="errorMessage"></p>
+        </div>
+    </div>
+
+    <!-- Agent Details -->
+    <div x-show="!loading && agent" class="space-y-6">
+        <!-- Header -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <h1 class="text-2xl font-bold text-gray-900" x-text="agent.name"></h1>
+                    <p class="mt-2 text-gray-600" x-text="agent.description || 'No description'"></p>
+                </div>
+                <div class="flex gap-2">
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                          :class="{
+                              'bg-green-100 text-green-800': agent.status === 'ACTIVE',
+                              'bg-gray-100 text-gray-800': agent.status === 'INACTIVE',
+                              'bg-yellow-100 text-yellow-800': agent.status === 'PAUSED'
+                          }"
+                          x-text="agent.status">
+                    </span>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-6 flex gap-3">
+                <a :href="'/agents/' + agent.id + '/chat'" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                    Start Chat
+                </a>
+                <button @click="toggleStatus()" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                    <span x-show="agent.status === 'ACTIVE'">Pause Agent</span>
+                    <span x-show="agent.status !== 'ACTIVE'">Activate Agent</span>
+                </button>
+                <a href="/agents" class="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50">
+                    Back to List
+                </a>
+            </div>
+        </div>
+
+        <!-- Configuration -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Configuration</h2>
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Model</dt>
+                    <dd class="mt-1 text-sm text-gray-900" x-text="agent.modelName"></dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Created</dt>
+                    <dd class="mt-1 text-sm text-gray-900" x-text="formatDateTime(agent.createdAt)"></dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Last Updated</dt>
+                    <dd class="mt-1 text-sm text-gray-900" x-text="formatDateTime(agent.updatedAt)"></dd>
+                </div>
+                <div>
+                    <dt class="text-sm font-medium text-gray-500">Tools</dt>
+                    <dd class="mt-1 text-sm text-gray-900" x-text="(agent.toolIds || []).length + ' configured'"></dd>
+                </div>
+            </dl>
+        </div>
+
+        <!-- System Prompt -->
+        <div class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">System Prompt</h2>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <pre class="text-sm text-gray-700 whitespace-pre-wrap" x-text="agent.systemPrompt"></pre>
+            </div>
+        </div>
+
+        <!-- Tools -->
+        <div x-show="agent.toolIds && agent.toolIds.length > 0" class="bg-white shadow rounded-lg p-6">
+            <h2 class="text-lg font-semibold text-gray-900 mb-4">Connected Tools</h2>
+            <div class="space-y-2">
+                <template x-for="toolId in agent.toolIds" :key="toolId">
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <span class="text-sm text-gray-700" x-text="toolId"></span>
+                        <a :href="'/tools/' + toolId" class="text-sm text-indigo-600 hover:text-indigo-700">View</a>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+</div>
+{/content}
+
+{#scripts}
+<script>
+function agentDetail() {
+    return {
+        agent: null,
+        loading: false,
+        errorMessage: '',
+
+        async init() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                window.location.href = '/auth/login';
+                return;
+            }
+
+            const agentId = window.location.pathname.split('/')[2];
+            await this.loadAgent(agentId);
+        },
+
+        async loadAgent(agentId) {
+            try {
+                this.loading = true;
+                this.errorMessage = '';
+                const token = localStorage.getItem('accessToken');
+
+                const response = await fetch('/api/agents/' + agentId, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+
+                if (response.ok) {
+                    this.agent = await response.json();
+                } else if (response.status === 401) {
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/auth/login';
+                } else if (response.status === 404) {
+                    this.errorMessage = 'Agent not found';
+                } else {
+                    this.errorMessage = 'Failed to load agent';
+                }
+            } catch (error) {
+                console.error('Error loading agent:', error);
+                this.errorMessage = 'Failed to load agent';
+            } finally {
+                this.loading = false;
+            }
+        },
+
+        async toggleStatus() {
+            try {
+                const token = localStorage.getItem('accessToken');
+                const newStatus = this.agent.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+
+                const response = await fetch('/api/agents/' + this.agent.id, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                if (response.ok) {
+                    this.agent = await response.json();
+                } else if (response.status === 401) {
+                    localStorage.removeItem('accessToken');
+                    window.location.href = '/auth/login';
+                } else {
+                    this.errorMessage = 'Failed to update agent status';
+                }
+            } catch (error) {
+                console.error('Error updating agent:', error);
+                this.errorMessage = 'Failed to update agent status';
+            }
+        },
+
+        formatDateTime(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleString();
+        }
+    }
+}
+</script>
+{/scripts}
+
+{/include}
