@@ -113,9 +113,19 @@ ai-agent-platform/
 │   │   ├── repository/      # Data access (🔄 Partial)
 │   │   │   └── UserRepository.java (✅)
 │   │   ├── rest/            # REST API endpoints (🔄 Partial)
+│   │   │   ├── AgentPageResource.java (✅)
+│   │   │   ├── AgentResource.java (✅)
 │   │   │   ├── AuthResource.java (✅)
 │   │   │   ├── AuthPageResource.java (✅)
-│   │   │   └── HomeResource.java (✅)
+│   │   │   ├── ConversationResource.java (✅)
+│   │   │   ├── DashboardResource.java (✅)
+│   │   │   ├── DocumentPageResource.java (✅)
+│   │   │   ├── DocumentResource.java (✅)
+│   │   │   ├── HomeResource.java (✅)
+│   │   │   ├── ToolPageResource.java (✅)
+│   │   │   ├── ToolResource.java (✅)
+│   │   │   ├── WizardPageResource.java (✅)
+│   │   │   └── WizardResource.java (✅)
 │   │   ├── websocket/       # WebSocket endpoints
 │   │   ├── ai/              # AI service interfaces (🔄 Partial)
 │   │   │   ├── MistralAIConfig.java (✅)
@@ -942,6 +952,78 @@ function toolEditForm(toolId) {
 ```
 
 **Key Pattern:** Pass server-side template variables directly to Alpine.js components rather than parsing URLs client-side. This ensures data consistency and simplifies the code.
+
+### Agent Management UI
+
+The platform provides web pages for managing AI agents:
+
+#### GET /agents
+Agent list page with all organization agents.
+
+**Authentication:** Public access (data loaded client-side with JWT)
+
+**Features:**
+- List all agents with name, description, status, and model
+- View agent details and chat interface
+- Create, edit, and delete actions
+- Status indicators (ACTIVE, PAUSED, DELETED)
+- Responsive design with Tailwind CSS
+
+**Template:** `templates/agents/list.html`
+
+#### GET /agents/{id}
+Agent detail page showing configuration and metrics.
+
+**Authentication:** Public access (data loaded client-side with JWT)
+
+**Features:**
+- Agent configuration details (name, description, system prompt)
+- Associated tools list
+- Performance metrics
+- Edit and delete actions
+- Link to chat interface
+
+**Template:** `templates/agents/detail.html`
+
+**Implementation Pattern:**
+```html
+<!-- Pass agentId from Qute to Alpine.js -->
+<div x-data="agentDetail('{agentId}')" x-init="init()">
+```
+
+#### GET /agents/{id}/chat
+Real-time chat interface with the agent.
+
+**Authentication:** Public access (WebSocket connection requires JWT)
+
+**Features:**
+- Real-time streaming responses via WebSocket
+- Conversation history display
+- Message input with send button
+- Typing indicators
+- Error handling and reconnection
+- Mobile-responsive chat UI
+
+**Template:** `templates/agents/chat.html`
+
+**WebSocket Connection:**
+```javascript
+const ws = new WebSocket('ws://localhost:8080/ws/agent/' + agentId + '/chat');
+ws.onopen = () => {
+  ws.send(JSON.stringify({
+    message: userInput,
+    userId: currentUserId,
+    conversationId: currentConversationId
+  }));
+};
+```
+
+**Technical Implementation:**
+- Server-side rendering with Qute templates
+- Client-side data loading via JavaScript fetch with JWT authentication
+- WebSocket for real-time chat streaming
+- Alpine.js for interactive components
+- Automatic redirect to login if token missing/expired
 
 ### Testing Tool Registry API
 
